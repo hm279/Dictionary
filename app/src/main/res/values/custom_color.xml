@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="material_teal_300">#4db6ac</color>
+    <color name="material_teal_400">#26a69a</color>
+    <color name="material_teal_600">#00897b</color>
+    <color name="material_teal_700">#00796b</color>
+    <color name="material_teal_800">#00695c</color>
+    <color name="divider_color">#1F000000</color>
+</resources>

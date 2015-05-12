@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/manager_root">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/manager_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:minHeight="?attr/actionBarSize"
+        />
+
+    <FrameLayout
+        android:id="@+id/manager_frame"
+        android:layout_below="@+id/manager_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textSize="22sp"
+            android:textColor="@color/secondary_text_default_material_light"
+            android:id="@+id/emptyView"/>
+
+        <ListView
+            android:id="@+id/manager_listView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="end|bottom" />
+    </FrameLayout>
+
+    <ImageView
+        android:visibility="gone"
+        android:id="@+id/manager_fab"
+        android:layout_width="68dp"
+        android:layout_height="68dp"
+        android:src="@drawable/ic_add_black_24dp"
+        android:scaleType="center"
+        android:tint="@android:color/white"
+        android:background="@drawable/floating_button"
+
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="24dp"
+        android:layout_marginRight="24dp"
+        android:layout_marginEnd="24dp"
+        />
+
+</RelativeLayout>
