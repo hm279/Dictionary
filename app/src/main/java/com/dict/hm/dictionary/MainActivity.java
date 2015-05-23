@@ -387,7 +387,7 @@ public class MainActivity extends AppCompatActivity
             words = new ArrayAdapter<>(this, R.layout.textview_item);
             ArrayList<Item> list = new ArrayList<>();
             int idIndex = cursor.getColumnIndex(BaseColumns._ID);
-            int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteDefine.KEY_WORD);
+            int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteDefine.COLUMN_KEY_WORD);
             cursor.moveToFirst();
             query = query.toLowerCase();
             String lowerCase;
@@ -422,8 +422,8 @@ public class MainActivity extends AppCompatActivity
         Cursor cursor = getContentResolver().query(uri, null, null, null, null);
         if (cursor != null) {
             cursor.moveToFirst();
-            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
-            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
+            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_SIZE);
             String wordDefinition = null;
             if (dictParser != null) {
                 wordDefinition = dictParser.getWordDefinition(cursor.getInt(offsetIndex), cursor.getInt(sizeIndex));
@@ -445,8 +445,8 @@ public class MainActivity extends AppCompatActivity
     private void showWordDefinition(String word, Cursor cursor) {
         if (cursor != null) {
             cursor.moveToFirst();
-            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
-            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
+            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_SIZE);
             int offset = cursor.getInt(offsetIndex);
             int size = cursor.getInt(sizeIndex);
             String definition = null;

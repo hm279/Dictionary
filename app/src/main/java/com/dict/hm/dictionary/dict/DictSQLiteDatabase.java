@@ -60,15 +60,15 @@ public class DictSQLiteDatabase {
     }
 
     public Cursor getWordMatches(String query, String[] columns) {
-        String selection = DictSQLiteDefine.KEY_WORD + " MATCH ?";
+        String selection = DictSQLiteDefine.COLUMN_KEY_WORD + " MATCH ?";
         String[] selectionArgs = new String[] {"^"+query+"*"};
         return query(selection, selectionArgs, columns);
     }
 
     public Cursor getWordMatchesInLength(String word, String[] columns) {
         int length = word.length();
-        String selection = DictSQLiteDefine.KEY_WORD + " MATCH ? AND length("
-                + DictSQLiteDefine.KEY_WORD + ")=" + length;
+        String selection = DictSQLiteDefine.COLUMN_KEY_WORD + " MATCH ? AND length("
+                + DictSQLiteDefine.COLUMN_KEY_WORD + ")=" + length;
         String[] selectionArgs = new String[] {"^"+word};
         return query(selection, selectionArgs, columns);
     }
@@ -127,11 +127,11 @@ public class DictSQLiteDatabase {
 
     private static HashMap<String, String> buildColumnMap() {
         HashMap<String, String> map = new HashMap<>();
-        map.put(DictSQLiteDefine.KEY_WORD, DictSQLiteDefine.KEY_WORD);
+        map.put(DictSQLiteDefine.COLUMN_KEY_WORD, DictSQLiteDefine.COLUMN_KEY_WORD);
         map.put(BaseColumns._ID, "rowid AS " + BaseColumns._ID);
         map.put(SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID, "rowid AS " +
                 SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID);
-        map.put(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA, DictSQLiteDefine.KEY_WORD + " AS " +
+        map.put(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA, DictSQLiteDefine.COLUMN_KEY_WORD + " AS " +
                 SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA);
         return map;
     }

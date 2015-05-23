@@ -67,14 +67,14 @@ public class DictSQLiteOpenHelper extends SQLiteOpenHelper{
 
     private long addWord(String word) {
         ContentValues values = new ContentValues();
-        values.put(DictSQLiteDefine.KEY_WORD, word);
+        values.put(DictSQLiteDefine.COLUMN_KEY_WORD, word);
         return database.insert(wordTableName, null, values);
     }
 
     private long addWord(int offset, int size) {
         ContentValues values = new ContentValues();
-        values.put(DictSQLiteDefine.OFFSET, offset);
-        values.put(DictSQLiteDefine.SIZE, size);
+        values.put(DictSQLiteDefine.COLUMN_OFFSET, offset);
+        values.put(DictSQLiteDefine.COLUMN_SIZE, size);
         return database.insert(indexTableName, null, values);
     }
 

@@ -100,8 +100,6 @@ public class PaperViewerFragment extends ListFragment {
                     jsonAdapter.cancelRemove();
                 }
                 return true;
-            case R.id.action_test:
-                return true;
         }
         return super.onOptionsItemSelected(item);
     }

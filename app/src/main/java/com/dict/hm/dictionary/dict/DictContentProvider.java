@@ -26,9 +26,9 @@ public class DictContentProvider extends ContentProvider{
 
     private String[] suggestionColumns = new String[] {
             BaseColumns._ID,
-            DictSQLiteDefine.KEY_WORD,
+            DictSQLiteDefine.COLUMN_KEY_WORD,
             /**
-             * alias of KEY_WORD
+             * alias of COLUMN_KEY_WORD
              * This column allows suggestions to provide additional data that is included
              * as an extra in the intent’s EXTRA_DATA_KEY key.
              */
@@ -39,7 +39,7 @@ public class DictContentProvider extends ContentProvider{
 
     private String[] wordColumns = new String[] {
             BaseColumns._ID,
-            DictSQLiteDefine.KEY_WORD};
+            DictSQLiteDefine.COLUMN_KEY_WORD};
 
     //UriMatcher stuff
     private static final int SEARCH_WORDS = 0;
@@ -168,7 +168,7 @@ public class DictContentProvider extends ContentProvider{
         String rowId = uri.getLastPathSegment();
         String[] columns = new String[] {
                 BaseColumns._ID,
-                DictSQLiteDefine.KEY_WORD,
+                DictSQLiteDefine.COLUMN_KEY_WORD,
                 SearchManager.SUGGEST_COLUMN_SHORTCUT_ID,
                 SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID};
 

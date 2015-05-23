@@ -24,9 +24,5 @@
         android:id="@+id/action_save"
         android:title="Save"
         />
-    <item
-        app:showAsAction="ifRoom"
-        android:id="@+id/action_test"
-        android:title="Test"
-        />
+
 </menu>

@@ -12,15 +12,15 @@ public class DictSQLiteDefine {
      * define dictionary's word table.
      * this table will be created as FTS3 table in SQLiteDatabase.
      */
-    public static final String KEY_WORD = SearchManager.SUGGEST_COLUMN_TEXT_1;
+    public static final String COLUMN_KEY_WORD = SearchManager.SUGGEST_COLUMN_TEXT_1;
 
     /**
      * define word table
      */
     public static final String WORD_FTS_TABLE =
-            "CREATE VIRTUAL TABLE %s USING fts3 (" + KEY_WORD + " TEXT)";
+            "CREATE VIRTUAL TABLE %s USING fts3 (" + COLUMN_KEY_WORD + " TEXT)";
 
-    public static final String sortOrder = KEY_WORD + " ASC"; //"ASC"
+    public static final String sortOrder = COLUMN_KEY_WORD + " ASC"; //"ASC"
 
     public static final String FTS_PREFIX = "fts3-";
 
@@ -30,14 +30,14 @@ public class DictSQLiteDefine {
      * define dictionary's word indexing.
      * this table will be created as normal table in SQLiteDatabase.
      */
-    public static final String OFFSET = "offset";
-    public static final String SIZE = "size";
+    public static final String COLUMN_OFFSET = "offset";
+    public static final String COLUMN_SIZE = "size";
 
     /**
      * define index table
      */
     public static final String WORD_INDEX_TABLE = "CREATE TABLE %s (" +
-            OFFSET + " INTEGER, " + SIZE + " INTEGER)";
+            COLUMN_OFFSET + " INTEGER, " + COLUMN_SIZE + " INTEGER)";
 
     /** ------------------------------------------------------------------------------------------*
      * define SQLiteDatabase name and version
@@ -49,7 +49,7 @@ public class DictSQLiteDefine {
      * define a inner join sql
      */
     private static final String inner_join_sql = "select * from %s a inner join %s b" +
-            " ON a.rowid = b.rowid WHERE b." + KEY_WORD + " MATCH ? AND length(" + KEY_WORD + ")=%d";
+            " ON a.rowid = b.rowid WHERE b." + COLUMN_KEY_WORD + " MATCH ? AND length(" + COLUMN_KEY_WORD + ")=%d";
 
 
     public static String getCreateFTSTable(String name) {

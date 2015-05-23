@@ -135,8 +135,8 @@ public class PaperViewerAdapter extends BaseAdapter
             try {
                 cursor.moveToFirst();
                 if (cursor.getCount() > 0) {
-                    int i0 = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
-                    int i1 = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+                    int i0 = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
+                    int i1 = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_SIZE);
                     offset = cursor.getInt(i0);
                     size = cursor.getInt(i1);
                 }
