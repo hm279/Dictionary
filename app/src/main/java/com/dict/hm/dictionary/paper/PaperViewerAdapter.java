@@ -11,7 +11,7 @@ import android.widget.TextView;
 
 import com.dict.hm.dictionary.async.WordAsyncQueryHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
-import com.dict.hm.dictionary.dict.DictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.parse.DictParser;
 
@@ -127,23 +127,19 @@ public class PaperViewerAdapter extends BaseAdapter
         updateWordDefinition(token, cookie, cursor);
     }
 
+    //TODO: need to be changed
     private void updateWordDefinition(int token, Object cookie, Cursor cursor) {
         int offset = -1;
         int size = -1;
         if (cursor != null) {
             try {
                 cursor.moveToFirst();
-                int index = cursor.getColumnIndex(DictSQLiteOpenHelper.KEY_WORD);
-                do {
-                    String result = cursor.getString(index);
-                    if (result.equals(cookie)) {
-                        int i0 = cursor.getColumnIndex(DictSQLiteOpenHelper.KEY_OFFSET);
-                        int i1 = cursor.getColumnIndex(DictSQLiteOpenHelper.KEY_SIZE);
-                        offset = cursor.getInt(i0);
-                        size = cursor.getInt(i1);
-                        break;
-                    }
-                } while (cursor.moveToNext());
+                if (cursor.getCount() > 0) {
+                    int i0 = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
+                    int i1 = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+                    offset = cursor.getInt(i0);
+                    size = cursor.getInt(i1);
+                }
             } finally {
                 cursor.close();
             }
@@ -159,11 +155,14 @@ public class PaperViewerAdapter extends BaseAdapter
     }
 
     private String getDefinition(int offset, int size) {
-        String definition = parser.getWordDefinition(offset, size);
+        String definition = null;
+        if (parser != null) {
+            definition = parser.getWordDefinition(offset, size);
+        }
         if (definition != null) {
             return definition;
         }
-        return "can't get definition from .dict file";
+        return "occur error while reading text from .dict file";
     }
 
 }

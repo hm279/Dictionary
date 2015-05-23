@@ -24,18 +24,29 @@ public class DictContentProvider extends ContentProvider{
     public static final String DEFINITION_MIME_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE +
             "/vnd.com.dict.hm.provider";
 
-    String[] columns = new String[] {
+    private String[] suggestionColumns = new String[] {
             BaseColumns._ID,
-            DictSQLiteOpenHelper.KEY_WORD,
-            DictSQLiteOpenHelper.KEY_OFFSET,
-            DictSQLiteOpenHelper.KEY_SIZE };
+            DictSQLiteDefine.KEY_WORD,
+            /**
+             * alias of KEY_WORD
+             * This column allows suggestions to provide additional data that is included
+             * as an extra in the intent’s EXTRA_DATA_KEY key.
+             */
+            SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA,
+            /* SearchManager.SUGGEST_COLUMN_SHORTCUT_ID,
+                        (only if you want to refresh shortcuts) */
+            SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID};
+
+    private String[] wordColumns = new String[] {
+            BaseColumns._ID,
+            DictSQLiteDefine.KEY_WORD};
 
     //UriMatcher stuff
     private static final int SEARCH_WORDS = 0;
     private static final int GET_WORD = 1;
     private static final int SEARCH_SUGGEST = 2;
     private static final int REFRESH_SHORTCUT = 3;
-    private static final int GET_WORD_BY_WORD = 4;
+    private static final int GET_INDEX_BY_WORD = 4;
     private static final UriMatcher uriMatcher = buildUriMatcher();
 
     private DictSQLiteDatabase mDictionary;
@@ -57,7 +68,7 @@ public class DictContentProvider extends ContentProvider{
         /**
          * this is for the PaperViewAdapter
          */
-        matcher.addURI(AUTHORITY, "dictionary/word", GET_WORD_BY_WORD);
+        matcher.addURI(AUTHORITY, "dictionary/word", GET_INDEX_BY_WORD);
         return matcher;
     }
 
@@ -77,14 +88,14 @@ public class DictContentProvider extends ContentProvider{
                       "selectionArgs must be provided for the Uri: " + uri);
                 }
                 return search(selectionArgs[0]);
-            case GET_WORD_BY_WORD:
+            case GET_INDEX_BY_WORD:
                 if (selectionArgs == null) {
                     throw new IllegalArgumentException(
                     "selectionArgs must be provided for the Uri: " + uri);
                 }
-                return getWord(selectionArgs[0]);
+                return getWordIndex(selectionArgs[0]);
             case GET_WORD:
-                return getWord(uri);
+                return getWordIndex(uri);
             case REFRESH_SHORTCUT:
                 return refreshShortcut(uri);
             default:
@@ -104,17 +115,9 @@ public class DictContentProvider extends ContentProvider{
             return null;
         }
         query = query.toLowerCase();
-        String[] columns = new String[] {
-                BaseColumns._ID,
-                DictSQLiteOpenHelper.KEY_WORD,
-                DictSQLiteOpenHelper.KEY_OFFSET,
-                DictSQLiteOpenHelper.KEY_SIZE,
-                /* SearchManager.SUGGEST_COLUMN_SHORTCUT_ID,
-                        (only if you want to refresh shortcuts) */
-                SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID};
 
 //        return mDictionary.getWordMatches(query, columns);
-        return mDictionary.getWordMatchesInLength(query, columns);
+        return mDictionary.getWordMatchesInLength(query, suggestionColumns);
     }
 
     private Cursor search(String query) {
@@ -123,24 +126,34 @@ public class DictContentProvider extends ContentProvider{
             return null;
         }
         query = query.toLowerCase();
-
-//        return mDictionary.getWordLikes(query, columns);
-        return mDictionary.getWordMatches(query, columns);
+        return mDictionary.getWordMatches(query, wordColumns);
     }
 
-    private Cursor getWord(String word) {
+    /**
+     * get the word's index by word
+     *
+     * @param word word to query
+     * @return word's index to return
+     */
+    private Cursor getWordIndex(String word) {
         Log.d(TAG, "getWord:" + word);
         if (TextUtils.isEmpty(word)) {
             return null;
         }
         word = word.toLowerCase();
-        return mDictionary.getWordMatchesInLength(word, columns);
+        return mDictionary.getIndexByWord(word);
     }
 
-    private Cursor getWord(Uri uri) {
+    /**
+     * get word's index by word's id
+     *
+     * @param uri
+     * @return
+     */
+    private Cursor getWordIndex(Uri uri) {
         Log.d(TAG, "getWord:" + uri.toString());
         String rowId = uri.getLastPathSegment();
-        return mDictionary.getWord(rowId, columns);
+        return mDictionary.getIndexByRowId(rowId);
     }
 
     private Cursor refreshShortcut(Uri uri) {
@@ -155,7 +168,7 @@ public class DictContentProvider extends ContentProvider{
         String rowId = uri.getLastPathSegment();
         String[] columns = new String[] {
                 BaseColumns._ID,
-                DictSQLiteOpenHelper.KEY_WORD,
+                DictSQLiteDefine.KEY_WORD,
                 SearchManager.SUGGEST_COLUMN_SHORTCUT_ID,
                 SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID};
 

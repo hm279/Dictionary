@@ -26,6 +26,8 @@ import java.util.ArrayList;
  * manage paper
  */
 public class PaperManagerActivity extends BaseManagerActivity {
+    ArrayAdapter<String> adapter;
+    String deleteItem;
     File paperDir;
     PaperViewerFragment paperViewerFragment = null;
     String url = null;
@@ -194,15 +196,15 @@ public class PaperManagerActivity extends BaseManagerActivity {
         action = -1;
     }
 
-//    @Override
-//    protected void showFragment(Fragment fragment) {
-//        super.showFragment(fragment);
-//        Menu menu = toolbar.getMenu();
-//        menu.findItem(R.id.action_clear).setVisible(false);
-//        menu.findItem(R.id.action_attachment).setVisible(false);
-//        menu.findItem(R.id.action_add_url).setVisible(false);
-//        menu.findItem(R.id.action_scan_qrcode).setVisible(false);
-//    }
+    @Override
+    protected void showFragment(Fragment fragment) {
+        super.showFragment(fragment);
+        Menu menu = toolbar.getMenu();
+        menu.findItem(R.id.action_clear).setVisible(false);
+        menu.findItem(R.id.action_attachment).setVisible(false);
+        menu.findItem(R.id.action_add_url).setVisible(false);
+        menu.findItem(R.id.action_scan_qrcode).setVisible(false);
+    }
 
     @Override
     protected boolean dismissFragment() {

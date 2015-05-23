@@ -1,20 +1,16 @@
 package com.dict.hm.dictionary;
 
-import android.content.ClipDescription;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.ClipDrawable;
-import android.graphics.drawable.Drawable;
-import android.util.Log;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
-import android.widget.ImageView;
-import android.widget.RadioButton;
 import android.widget.TextView;
+
+import com.dict.hm.dictionary.dict.DictFormat;
 
 import java.util.ArrayList;
 
@@ -22,11 +18,10 @@ import java.util.ArrayList;
  * Created by hm on 15-1-29.
  */
 public class DrawerListViewAdapter extends BaseAdapter{
-    public static final int TYPE_ITEM_Paper = 0;
-    public static final int TYPE_ITEM_Book = 1;
+    public static final int TYPE_ITEM_PAPER = 0;
+    public static final int TYPE_ITEM_BOOK = 1;
     public static final int TYPE_TITLE = 2;
-    private int checkedPosition;
-    ArrayList<String> books;
+    ArrayList<DictFormat> books;
     ArrayList<String> papers;
     String title_paper;
     String title_dict;
@@ -65,7 +60,7 @@ public class DrawerListViewAdapter extends BaseAdapter{
         if (position == 0){
             return title_dict;
         } else if (position > 0 && position < books.size() + 1) {
-            return books.get(position - 1);
+            return books.get(position -1).getName();
         } else if (position == books.size() + 1) {
             return title_paper;
         } else if (position < 2 + books.size() + papers.size()){
@@ -87,9 +82,9 @@ public class DrawerListViewAdapter extends BaseAdapter{
     @Override
     public int getItemViewType(int position) {
         if (position > 0 && position < books.size() + 1) {
-            return TYPE_ITEM_Book;
+            return TYPE_ITEM_BOOK;
         } else if (position > books.size() + 1){
-            return TYPE_ITEM_Paper;
+            return TYPE_ITEM_PAPER;
         }
         return TYPE_TITLE;
     }
@@ -112,15 +107,16 @@ public class DrawerListViewAdapter extends BaseAdapter{
         textView.setText((String)getItem(position));
         CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkbox);
         switch (getItemViewType(position)) {
-            case TYPE_ITEM_Book:
-                if (position == checkedPosition) {
+            case TYPE_ITEM_BOOK:
+                if (books.get((int)getItemId(position)).getOn() > 0) {
                     checkBox.setChecked(true);
                     checkBox.setVisibility(View.VISIBLE);
                 } else {
                     checkBox.setChecked(false);
+                    checkBox.setVisibility(View.INVISIBLE);
                 }
                 break;
-            case TYPE_ITEM_Paper:
+            case TYPE_ITEM_PAPER:
                 checkBox.setVisibility(View.GONE);
                 break;
             case TYPE_TITLE:
@@ -144,21 +140,24 @@ public class DrawerListViewAdapter extends BaseAdapter{
         return view;
     }
 
-    public void setChecked(int position) {
-        if (getItemViewType(position) != TYPE_TITLE) {
-            checkedPosition = position;
-            notifyDataSetChanged();
+//    public void setChecked(int position) {
+//        if (getItemViewType(position) == TYPE_ITEM_BOOK) {
+//            notifyDataSetChanged();
+//        }
+//    }
+
+    public void setBookNames(ArrayList<DictFormat> data) {
+        if (data != null) {
+            books = data;
+//        notifyDataSetChanged();
         }
     }
 
-    public void setBookNames(ArrayList<String> data) {
-        books = data;
-//        notifyDataSetChanged();
-    }
-
     public void setPapers(ArrayList<String> data) {
-        papers = data;
+        if (data != null) {
+            papers = data;
 //        notifyDataSetChanged();
+        }
     }
 
 }

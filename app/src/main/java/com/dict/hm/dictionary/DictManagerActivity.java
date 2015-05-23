@@ -20,6 +20,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
+import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.lib.HttpDownload;
 import com.dict.hm.dictionary.lib.ZBarActivity;
@@ -36,6 +37,8 @@ public class DictManagerActivity extends BaseManagerActivity {
     public static final int DECOMPRESS = 10;
     public static final int DECOMPRESS_ERR = -10;
 
+    private ArrayAdapter<DictFormat> adapter;
+    private int deleteItemPosition;
     private DictManager manager;
     private int wordCount;
 
@@ -52,9 +55,9 @@ public class DictManagerActivity extends BaseManagerActivity {
         fab.setOnClickListener(fabClickListener);
 
         manager = DictManager.getInstance(this);
-        ArrayList<String> data = new ArrayList<>();
-        data.addAll(manager.getBooks());
-        adapter = new ArrayAdapter<>(this, R.layout.textview_item, data);
+//        ArrayList<DictFormat> data = new ArrayList<>();
+//        data.addAll(manager.getDictFormats());
+        adapter = new ArrayAdapter<>(this, R.layout.textview_item, manager.getDictFormats());
         listView.setAdapter(adapter);
     }
 
@@ -129,24 +132,25 @@ public class DictManagerActivity extends BaseManagerActivity {
         switch (action) {
             case ADD:
                 if (fileListFragment != null) {
-                    String mBookName = manager.addDictionary(selectedFile, handler);
-                    if (mBookName != null) {
+                    DictFormat format = manager.addDictionary(selectedFile, handler);
+                    if (format != null) {
                         dismissFragment();
-                        adapter.add(mBookName);
+//                        adapter.add(format);
                         initProgressDialog("Loading...", wordCount);
                     }
                 }
                 break;
-            case CLEAR:
-                manager.clearAllData();
-                adapter.clear();
-                break;
+//            case CLEAR:
+//                manager.clearAllDictionaries();
+//                adapter.clear();
+//                break;
             case DEL:
-                manager.removeDictionary(deleteItem, handler);
-                adapter.remove(deleteItem);
+                manager.removeDictionary(deleteItemPosition, handler);
+//                adapter.remove(adapter.getItem(deleteItemPosition));
                 break;
         }
         action = -1;
+        adapter.notifyDataSetChanged();
     }
 
     @Override
@@ -193,8 +197,8 @@ public class DictManagerActivity extends BaseManagerActivity {
     private AdapterView.OnItemClickListener dictClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            String book = (String) parent.getItemAtPosition(position);
-            String ifoPath = manager.getBookFilePath(book);
+            DictFormat dictFormat = (DictFormat) parent.getItemAtPosition(position);
+            String ifoPath = dictFormat.getData();
             IfoFormat format = new IfoFormat(new File(ifoPath));
             String msg = "Book Name: " + format.getBookName() + '\n'
                     + "Version: " + format.getVersion() + '\n'
@@ -203,7 +207,7 @@ public class DictManagerActivity extends BaseManagerActivity {
             AlertDialogFragment dialogFragment = AlertDialogFragment
                     .newInstance("Remove Dictionary?", msg, "Remove", "Cancel");
             dialogFragment.show(getFragmentManager(), null);
-            deleteItem = book;
+            deleteItemPosition = position;
             action = DEL;
         }
     };

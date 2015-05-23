@@ -74,7 +74,7 @@ public class ProgressDialog extends DialogFragment{
 
     public void setProgressBar(int value) {
         progressBar.setProgress(value);
-        if (value == progressBar.getMax()) {
+        if (value >= progressBar.getMax()) {
             dismiss();
         }
     }

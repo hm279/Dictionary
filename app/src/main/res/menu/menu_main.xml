@@ -18,15 +18,21 @@
         />
 
     <item android:id="@+id/action_my_dict"
-        android:title="@string/action_my_dict"
+        android:title="@string/action_user_dict"
         android:orderInCategory="13"
+        appandroid:showAsAction="never"
+        />
+
+    <item android:id="@+id/action_clear_myDict"
+        android:title="Clear Words"
+        android:orderInCategory="14"
         appandroid:showAsAction="never"
         />
 
     <item
         android:id="@+id/action_settings"
         android:title="@string/action_settings"
-        android:orderInCategory="14"
+        android:orderInCategory="15"
         appandroid:showAsAction="never"
         />
 

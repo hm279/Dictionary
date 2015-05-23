@@ -1,42 +1,36 @@
 package com.dict.hm.dictionary.dict;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.dict.hm.dictionary.BaseManagerActivity;
-import com.dict.hm.dictionary.R;
+import com.dict.hm.dictionary.MainActivity;
 import com.dict.hm.dictionary.async.LoadDictionary;
+import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 import com.dict.hm.dictionary.lib.UnGzipThread;
 import com.dict.hm.dictionary.parse.IfoFormat;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 /**
- * Created by hm on 15-1-23.
+ * Created by hm on 15-5-20.
  */
-public class DictManager {
-    /**
-     * KEY ---> SharedPreferences
-     * KEY ---> books set
-     * ACTIVE ---> the current active dictionary
-     * 'booName' ---> the '.ifo' file's path
-     *
-     * the bookName is also the database name
-     */
-    private static final String ACTIVE = "active";
-    private String KEY;
-    private Set<String> books;
-    private String activeBook = null;
-    private boolean init_finished = false;
+public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
+    private ArrayList<Long> rowid;
+    private ArrayList<DictFormat> dictFormats;
+    private int active;
+    private boolean inited = false;
 
     Context context;
+    UserDictSQLiteOpenHelper helper;
+    UserAsyncWorkerHandler queryHandler;
+    WeakReference<MainActivity.QueryCallback> reference = null;
+
     static DictManager manager;
 
     public static DictManager getInstance(Context context) {
@@ -46,42 +40,20 @@ public class DictManager {
         return manager;
     }
 
-    /**
-     *
-     * @param context
-     *
-     */
     public DictManager(Context context) {
         this.context = context.getApplicationContext();
-        KEY = context.getString(R.string.preference_file_key);
-
-        SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-        books = preferences.getStringSet(KEY, new HashSet<String>());
+        rowid = new ArrayList<>();
+        dictFormats = new ArrayList<>();
+        active = -1;
+        queryHandler = UserAsyncWorkerHandler.getInstance(context, this);
+        helper = UserDictSQLiteOpenHelper.getInstance(context);
+        queryHandler.startQuery();
     }
 
-    /**
-     *
-     * All a new dictionary. Storing the book name and book name's '.ifo' file path.
-     * while the book name exist, the path doesn't exist, it means that it hadn't finished loading
-     * the dictionary to database.
-     *
-     */
-    public void saveDictionaryFilePath(String bookName, String path) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        if (books == null) {
-            books = new HashSet<>();
-        }
-        if (bookName != null) {
-            books.add(bookName);
-            editor.putStringSet(KEY, books);
-        }
-        if (path != null) {
-            editor.putString(bookName, path);
-        }
-        editor.apply();
-        Log.d("Add Dictionary", bookName + "@" + path);
+    public void removeDictionary(int position, Handler handler) {
+        DictFormat format = dictFormats.get(position);
+        new DropTableThread(format.mTableName, handler).start();
+        deleteUserDict(position);
     }
 
     /**
@@ -95,12 +67,12 @@ public class DictManager {
      * .idx.
      * .dict.
      */
-    public String addDictionary(File ifoFile, Handler mHandler) {
+    public DictFormat addDictionary(File ifoFile, Handler mHandler) {
         if (ifoFile == null) {
             return null;
         }
         IfoFormat format = new IfoFormat(ifoFile);
-        if (books.contains(format.getBookName())) {
+        if (checkDict(format.getBookName())) {
             Toast.makeText(context, format.getBookName() + " has existed", Toast.LENGTH_LONG).show();
             return null;
         }
@@ -118,15 +90,17 @@ public class DictManager {
             if (!dictFile.exists() && gzipDictFile.exists()) {
                 new UnGzipThread(gzipDictFile, dictFile, mHandler).start();
             }
+
+            DictSQLiteOpenHelper helper = DictSQLiteOpenHelper.getInstance(context);
             if (!idxFile.exists() && gzipIdxFile.exists()) {
-                DictSQLiteOpenHelper.getInstance(context)
-                        .loadDictionary(format.getBookName(), gzipIdxFile, mHandler);
+                new LoadDictionary(format.getBookName(), idxFile, helper, mHandler).start();
             } else {
-                DictSQLiteOpenHelper.getInstance(context)
-                        .loadDictionary(format.getBookName(), idxFile, mHandler);
+                new LoadDictionary(format.getBookName(), idxFile, helper, mHandler).start();
             }
-            manager.saveDictionaryFilePath(format.getBookName(), ifoFile.getAbsolutePath());
-            return format.getBookName();
+            DictFormat dictFormat = new DictFormat(format.getBookName(), DictFormat.STAR_DICT, 0,
+                    ifoFile.getAbsolutePath(), format.getBookName());
+            insertUserDict(dictFormat);
+            return dictFormat;
         } else if (idxFile.exists()){
             Toast.makeText(context, dictFile.getName() + " file missing", Toast.LENGTH_LONG).show();
         } else if (dictFile.exists()) {
@@ -137,142 +111,90 @@ public class DictManager {
         return null;
     }
 
-    public void loadDictionary(String mBookName, File idxFile, Handler handler) {
-        DictIndexSQLiteHelper indexSQLiteHelper = DictIndexSQLiteHelper.getInstance(context);
-        DictWordSQLiteHelper wordSQLiteHelper = DictWordSQLiteHelper.getInstance(context);
-        new LoadDictionary(mBookName, idxFile, wordSQLiteHelper, indexSQLiteHelper, handler).start();
-    }
-
-
-    /**
-     *
-     * @param bookName
-     * Remove a dictionary. Delete the book name and the book name's path
-     */
-    public void removeDictionary(String bookName, Handler handler) {
-        new DropTableThread(bookName, handler).start();
-        if (books != null && books.contains(bookName)) {
-            books.remove(bookName);
-            SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putStringSet(KEY, books);
-            editor.remove(bookName);
-            if (activeBook.equals(bookName)) {
-                activeBook = null;
-                editor.remove(ACTIVE);
+    private boolean checkDict(String name) {
+        for (DictFormat format : dictFormats) {
+            if (format.name.equals(name)) {
+                return true;
             }
-            editor.apply();
-            /**
-             * reset the active book
-             */
-            getActiveBook();
-        }
-    }
-
-    public void clearAllData() {
-        File file = context.getExternalFilesDir(null);
-        if (file != null && context.deleteDatabase(file.getAbsolutePath() + File.separator
-                + DictSQLiteOpenHelper.DATABASE_NAME)) {
-            Toast.makeText(context, "Clear!!!", Toast.LENGTH_SHORT)
-                    .show();
-        }
-        SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        for (String book : books) {
-            editor.remove(book);
-        }
-        editor.remove(ACTIVE);
-        editor.remove(KEY);
-        editor.apply();
-        activeBook = null;
-        books.clear();
-    }
-
-    public String getBookFilePath(String bookName) {
-        SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-        return preferences.getString(bookName, null);
-    }
-
-    /**
-     *
-     * @return the book which is current using for word query.
-     */
-    public String getActiveBook() {
-        if (books == null) {
-            return null;
-        }
-        if (activeBook == null) {
-            SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-            activeBook = preferences.getString(ACTIVE, null);
-            if (activeBook == null || !books.contains(activeBook)) {
-                if (books.size() < 1) {
-                    return null;
-                } else {
-                    activeBook = books.iterator().next();
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(ACTIVE, activeBook);
-                    editor.apply();
-                }
-            }
-        }
-        if (books.contains(activeBook)) {
-            return activeBook;
-        } else {
-            return null;
-        }
-    }
-
-    public void saveActiveBook() {
-        SharedPreferences preferences = context.getSharedPreferences(KEY, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(ACTIVE, activeBook);
-        editor.apply();
-    }
-
-    /**
-     *
-     * @param booKName change the using book name for word query.
-     * @return true if change successfully, otherwise false
-     */
-    public boolean setActiveBook(String booKName) {
-        if (books.contains(booKName)) {
-            activeBook = booKName;
-            return true;
         }
         return false;
     }
 
-    public Set<String> getBooks() {
-        return books;
+    /**
+     * when add dictionary, insert dictionary data to UserDict.
+     */
+    private void insertUserDict(DictFormat format) {
+        long id = helper.insertDictionary(format);
+        if (id == -1) {
+            return;
+        }
+        dictFormats.add(format);
+        rowid.add(id);
+        if (active == -1) {
+            setActiveDict(0);
+        }
     }
 
-    private class InitDictThread extends Thread {
-        Context context;
-        Handler handler;
-
-        public InitDictThread(Context context, Handler handler) {
-            this.context = context;
-            this.handler = handler;
+    /**
+     * when remove dictionary, delete dictionary data from UserDict.
+     */
+    private void deleteUserDict(int position) {
+        helper.deleteDictionary(rowid.get(position));
+        dictFormats.remove(position);
+        rowid.remove(position);
+        if (active == position) {
+            active = -1;
+            if (dictFormats.size() > 0) {
+                setActiveDict(0);
+            }
         }
+    }
 
-        @Override
-        public void run() {
-            Cursor cursor = DictSQLiteOpenHelper.getInstance(this.context).getTables();
-            if (cursor != null) {
-                int index = cursor.getColumnIndex("name");
-                cursor.moveToFirst();
-                do {
-                    String name = cursor.getString(index);
-                    if (name.endsWith("_content") || name.endsWith("_segdir") ||
-                            name.endsWith("_segments") || name.equals("android_metadata")) {
-                        Log.d("table", cursor.getString(index));
-                    } else {
-                        books.add(name);
-                    }
-                } while (cursor.moveToNext());
-                init_finished= true;
-                Message msg = handler.obtainMessage(0);
-                handler.sendMessage(msg);
+//    public void clearAllDictionaries() {
+//    }
+
+    public int getActiveDict() {
+        return active;
+    }
+
+    public void setActiveDict(int active) {
+        if (active == this.active || active < 0 || active >= dictFormats.size()) {
+            return;
+        }
+        if (this.active >= 0) {
+            dictFormats.get(this.active).setOn(0);
+            queryHandler.startUpdate(rowid.get(this.active), 0);
+        }
+        dictFormats.get(active).setOn(1);
+        queryHandler.startUpdate(rowid.get(active), 1);
+        this.active = active;
+    }
+
+    public DictFormat getDictFormat(int id) {
+        if (id >=0 && id < dictFormats.size()) {
+            return dictFormats.get(id);
+        }
+        return null;
+    }
+
+    public ArrayList<DictFormat> getDictFormats() {
+        return dictFormats;
+    }
+
+    public boolean isInited() {
+        return inited;
+    }
+
+    private void setRowid(ArrayList<Long> rowid) {
+        this.rowid.addAll(rowid);
+    }
+
+    private void setDictFormats(ArrayList<DictFormat> dictFormats) {
+        this.dictFormats.addAll(dictFormats);
+        for (int i = 0; i < dictFormats.size(); i++) {
+            if (dictFormats.get(i).on > 0) {
+                active = i;
+                return;
             }
         }
     }
@@ -293,5 +215,61 @@ public class DictManager {
             message.obj = book;
             handler.sendMessage(message);
         }
+    }
+
+    public void setOnQueryCompleteCallback(MainActivity.QueryCallback callback) {
+        reference = new WeakReference<MainActivity.QueryCallback>(callback);
+    }
+
+    @Override
+    public void onQueryComplete(Cursor result) {
+        ArrayList<DictFormat> formats;
+        ArrayList<Long> rowids;
+        if (result != null) {
+            if (result.moveToFirst()) {
+                int idIndex = result.getColumnIndex("rowid");
+                int nameIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_NAME);
+                int typeIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_TYPE);
+                int dataIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_DATA);
+                int onIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_ACTIVE);
+                int tableIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_TABLE_NAME);
+                formats = new ArrayList<>();
+                rowids = new ArrayList<>();
+                do {
+                    formats.add(new DictFormat(
+                            result.getString(nameIndex),
+                            result.getInt(typeIndex),
+                            result.getInt(onIndex),
+                            result.getString(dataIndex),
+                            result.getString(tableIndex)));
+                    rowids.add(result.getLong(idIndex));
+                } while (result.moveToNext());
+                setDictFormats(formats);
+                setRowid(rowids);
+            }
+            result.close();
+        }
+        inited = true;
+        if (reference != null) {
+            MainActivity.QueryCallback callback = reference.get();
+            if (callback != null) {
+                callback.onQueryComplete();
+            }
+        }
+    }
+
+    @Override
+    public void onUpdateComplete(long id) {
+
+    }
+
+    @Override
+    public void onInsertComplete(long id) {
+
+    }
+
+    @Override
+    public void onDeleteComplete(long id) {
+
     }
 }

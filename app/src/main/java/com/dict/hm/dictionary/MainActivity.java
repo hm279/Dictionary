@@ -1,15 +1,10 @@
 package com.dict.hm.dictionary;
 
 import android.app.FragmentTransaction;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.SearchManager;
-import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -35,40 +30,46 @@ import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
+import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.DictManager;
-import com.dict.hm.dictionary.dict.DictSQLiteOpenHelper;
-import com.dict.hm.dictionary.dict.MyDictAdapter;
+import com.dict.hm.dictionary.dict.DictSQLiteDefine;
+import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 import com.dict.hm.dictionary.paper.PaperJsonReader;
 import com.dict.hm.dictionary.paper.PaperViewerAdapter;
 import com.dict.hm.dictionary.parse.DictParser;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements UserAsyncWorkerHandler.UserDictQueryListener{
 
     private String TAG = "MainActivity";
 
     private Toolbar toolbar;
     private DrawerLayout drawerLayout;
     private LinearLayout leftDrawerLayout;
-    private ListView drawerListView;
     private ActionBarDrawerToggle drawerToggle;
+    private DrawerListViewAdapter drawerAdapter;
 
     private SearchView searchView;
     private DefinitionFragment definitionFragment = null;
-    private boolean canDismiss = false;
     private TextView wordView;
     private ListView resultListView;
     private MenuItem searchItem;
+    private boolean canDismiss = false;
 
     private DictParser dictParser = null;
     private DictManager manager = null;
     private PaperJsonReader jsonReader = null;
+    private UserDictAdapter userDictAdapter = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +94,20 @@ public class MainActivity extends AppCompatActivity {
         resultListView.addHeaderView(wordView);
 
         initDrawerNavigation();
-        handleIntent(getIntent());
+        manager = DictManager.getInstance(this);
+        if (manager.isInited()) {
+            updateDrawerAdapterData();
+        } else {
+            QueryCallback callback = new QueryCallback();
+            manager.setOnQueryCompleteCallback(callback);
+        }
+        /**
+         * I don't know why this need to handleIntent()
+         * maybe the notification need this.
+         */
+//        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+//        handleIntent(getIntent());
+//        }
 
         if (BuildConfig.DEBUG) {
 //        setDefaultKeyMode(DEFAULT_KEYS_SEARCH_LOCAL);
@@ -115,19 +129,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        if (manager == null) {
-            manager = DictManager.getInstance(this);
-            updateDrawerListViewAdapterData();
-            switchActiveBookName(manager.getActiveBook());
-            if (manager.getBooks().size() < 0) {
-                wordView.setText("Hello!\nYou Haven't got any Dictionary");
-            }
-        }
-    }
-
-    @Override
     public void onDestroy() {
         if (dictParser != null) {
             dictParser.closeFile();
@@ -137,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             jsonReader.close();
             jsonReader = null;
         }
-        manager.saveActiveBook();
+//        manager.saveActiveBook();
         super.onDestroy();
     }
 
@@ -163,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
          * This is why you should call setIntent(Intent) inside onNewIntent(Intent) (so that the
          * intent saved by the activity is updated in case you call getIntent() in the future)
          */
-//        setIntent(intent);
+        setIntent(intent);
         handleIntent(intent);
     }
 
@@ -210,9 +211,8 @@ public class MainActivity extends AppCompatActivity {
         switch (id) {
             case R.id.action_settings:
                 //for test
-//                initNotification();
-//                setNotification(1, "first");
-                NotificationDialog.newInstance("this is a test").show(getFragmentManager(), null);
+//                NotificationDialog.newInstance("this is a test").show(getFragmentManager(), null);
+                copy();
                 return true;
             case R.id.action_add_dict:
                 startManagerActivity(R.id.action_add_dict);
@@ -221,7 +221,10 @@ public class MainActivity extends AppCompatActivity {
                 startManagerActivity(R.id.action_add_paper);
                 return true;
             case R.id.action_my_dict:
-                showMyDict();
+                showUserDict();
+                return true;
+            case R.id.action_clear_myDict:
+                clearUserDict();
                 return true;
             case R.id.search:
 //                onSearchRequested();
@@ -237,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
          * check whether the dictionary change, and update the drawerListView's data
          */
         if (manager != null) {
-            updateDrawerListViewAdapterData();
+            updateDrawerAdapterData();
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -254,6 +257,31 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(intent, 0);
         }
     }
+
+    /**
+     *
+     * @param intent
+     * Handle the query request from SearchView's suggestion query or search query.
+     */
+    private void handleIntent(Intent intent) {
+        Log.d(TAG, "intent action:" + intent.getAction());
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            /**
+             * called for SearchView's suggestion.
+             */
+            Uri uri = intent.getData();
+            String word = intent.getStringExtra(SearchManager.EXTRA_DATA_KEY);
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            showWordDefinition(word, cursor);
+        } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            String query = intent.getStringExtra(SearchManager.QUERY);
+            showQueryResults(query);
+        } /**else if (PI2.equals(intent.getAction())) {
+         Toast.makeText(this, "Notification!-->2", Toast.LENGTH_LONG).show();
+         }*/
+    }
+
+    /** ----------------------------Drawer navigation--------------------------------------------*/
 
     private void initDrawerNavigation() {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -279,23 +307,21 @@ public class MainActivity extends AppCompatActivity {
         drawerToggle.syncState();
         drawerLayout.setDrawerListener(drawerToggle);
 
-        drawerListView = (ListView) findViewById(R.id.drawer_listView);
-        final DrawerListViewAdapter adapter = new DrawerListViewAdapter(this);
-        drawerListView.setAdapter(adapter);
+        ListView drawerListView = (ListView) findViewById(R.id.drawer_listView);
+        drawerAdapter = new DrawerListViewAdapter(this);
+        drawerListView.setAdapter(drawerAdapter);
         drawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 drawerLayout.closeDrawer(leftDrawerLayout);
 
-                int type = adapter.getItemViewType(position);
-                String item = (String) adapter.getItem(position);
-//                String title = getString(R.string.dict);
-                if (type == DrawerListViewAdapter.TYPE_ITEM_Book) {
-                    adapter.setChecked(position);
-                    switchActiveBookName(item);
-                } else if (type == DrawerListViewAdapter.TYPE_ITEM_Paper) {
+                int type = drawerAdapter.getItemViewType(position);
+                String item = (String) drawerAdapter.getItem(position);
+                if (type == DrawerListViewAdapter.TYPE_ITEM_BOOK) {
+                    switchActiveDict((int) drawerAdapter.getItemId(position));
+                    drawerAdapter.notifyDataSetChanged();
+                } else if (type == DrawerListViewAdapter.TYPE_ITEM_PAPER) {
                     showPaper(item);
-//                    title = getString(R.string.paper);
                 } else if (type == DrawerListViewAdapter.TYPE_TITLE) {
                     if (position == 0) {
                         startManagerActivity(R.id.action_add_dict);
@@ -303,24 +329,177 @@ public class MainActivity extends AppCompatActivity {
                         startManagerActivity(R.id.action_add_paper);
                     }
                 }
-//                getSupportActionBar().setTitle(title);
             }
         });
     }
 
-    private void updateDrawerListViewAdapterData() {
-        ArrayList<String> books = new ArrayList<>();
-        books.addAll(manager.getBooks());
-        DrawerListViewAdapter adapter = (DrawerListViewAdapter) drawerListView.getAdapter();
-        adapter.setBookNames(books);
-        adapter.setPapers(getPapers());
-        if (manager.getActiveBook() != null) {
-            adapter.setChecked(books.indexOf(manager.getActiveBook()) + 1);
-        }
-        adapter.notifyDataSetChanged();
-        //changed to onStart()
-//        switchActiveBookName(manager.getActiveBook());
+    private void updateDrawerAdapterData() {
+        drawerAdapter.setBookNames(manager.getDictFormats());
+        drawerAdapter.setPapers(getPapers());
+        drawerAdapter.notifyDataSetChanged();
+        switchActiveDict(manager.getActiveDict());
     }
+
+    private void switchActiveDict(int active) {
+        Log.d(TAG, "active:" + active);
+        DictFormat format = manager.getDictFormat(active);
+        if (format != null) {
+            setDictFile(format.getType(), format.getData());
+            manager.setActiveDict(active);
+            wordView.setText(format.getName());
+        } else {
+            wordView.setText("");
+        }
+        resultListView.setAdapter(null);
+    }
+
+    /** ----------------------------Search and Query---------------------------------------------*/
+    /**
+     * TODO: should use WordAsyncQueryHandler to query words?
+     */
+
+    AdapterView.OnItemClickListener resultListViewListener = new AdapterView.OnItemClickListener(){
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            if (!(parent.getAdapter().getItem(position) instanceof Item)) {
+                return;
+            }
+            Item item = (Item) parent.getAdapter().getItem(position);
+            String definition = getWordDefinition(item.id);
+            showDefinition(item.text, definition);
+        }
+    };
+
+    public void showQueryResults(String query) {
+        String countString;
+        boolean b = true;
+        ArrayAdapter<Item> words = null;
+        ContentResolver contentResolver = getContentResolver();
+        final Cursor cursor = contentResolver.query(DictContentProvider.CONTENT_URI, null, null,
+                new String[]{query}, null);
+        if (null == cursor) {
+            countString = getString(R.string.no_results, new Object[]{query});
+        } else {
+            int count = cursor.getCount();
+            countString = getResources().getQuantityString(R.plurals.search_results,
+                    count, new Object[] {count, query});
+
+            words = new ArrayAdapter<>(this, R.layout.textview_item);
+            ArrayList<Item> list = new ArrayList<>();
+            int idIndex = cursor.getColumnIndex(BaseColumns._ID);
+            int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteDefine.KEY_WORD);
+            cursor.moveToFirst();
+            query = query.toLowerCase();
+            String lowerCase;
+            do {
+                String text = cursor.getString(wordIndex);
+                lowerCase = text.toLowerCase();
+                Item item = new Item(cursor.getLong(idIndex), text);
+                if (lowerCase.startsWith(query)) {
+                    words.add(item);
+                    if (b && lowerCase.equals(query)) {
+                        String definition = getWordDefinition(item.id);
+                        showDefinition(text, definition);
+                        b = false;
+                        Log.d(TAG, "-" + text);
+                    }
+                } else {
+                    list.add(item);
+                }
+            } while (cursor.moveToNext());
+            words.addAll(list);
+            cursor.close();
+        }
+        if (canDismiss && b) {
+            dismissDefinition(false);
+        }
+        wordView.setText(countString);
+        resultListView.setAdapter(words);
+    }
+
+    private String getWordDefinition(long rowId) {
+        Uri uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + rowId);
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+        if (cursor != null) {
+            cursor.moveToFirst();
+            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
+            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+            String wordDefinition = null;
+            if (dictParser != null) {
+                wordDefinition = dictParser.getWordDefinition(cursor.getInt(offsetIndex), cursor.getInt(sizeIndex));
+            }
+            if (wordDefinition == null) {
+                wordDefinition = "occur error while reading text from .dict file";
+            }
+            cursor.close();
+            return wordDefinition;
+        }
+        return null;
+    }
+
+    /**
+     *
+     * @param cursor contains the definition of a word.
+     *               will create a Dialog fragment to show word definition.
+     */
+    private void showWordDefinition(String word, Cursor cursor) {
+        if (cursor != null) {
+            cursor.moveToFirst();
+            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.OFFSET);
+            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.SIZE);
+            int offset = cursor.getInt(offsetIndex);
+            int size = cursor.getInt(sizeIndex);
+            String definition = null;
+            if (dictParser != null) {
+                definition = dictParser.getWordDefinition(offset, size);
+            }
+            if (definition == null){
+                definition = "occur error while reading text from .dict file";
+            }
+            showDefinition(word, definition);
+            cursor.close();
+        }
+    }
+
+    private void showDefinition(String word, String definition) {
+        if (canDismiss) {
+            definitionFragment.updateViewData(word, definition);
+        } else {
+            if (definitionFragment == null) {
+                definitionFragment = new DefinitionFragment();
+            }
+            Bundle bundle = new Bundle();
+            bundle.putString(DefinitionFragment.WORD, word);
+            bundle.putString(DefinitionFragment.DEF, definition);
+            definitionFragment.setArguments(bundle);
+            getFragmentManager().beginTransaction()
+                    .add(R.id.main_content, definitionFragment)
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+                    .commit();
+            canDismiss = true;
+            resultListView.setVisibility(View.INVISIBLE);
+        }
+        searchItem.collapseActionView();
+        Log.d("searchView", "clear focus");
+    }
+
+    private void dismissDefinition(boolean focus) {
+        getFragmentManager().beginTransaction()
+                .remove(definitionFragment)
+                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
+                .commit();
+        canDismiss = false;
+        resultListView.setVisibility(View.VISIBLE);
+//        if (focus) {
+//            searchView.requestFocus();
+//            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+//            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+//        }
+        searchItem.expandActionView();
+        searchView.clearFocus();
+    }
+
+    /** -----------------------------------------------------------------------------------------*/
 
     private ArrayList<String> getPapers() {
         ArrayList<String> papers = new ArrayList<>();
@@ -347,27 +526,103 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "Paper switch");
     }
 
+    /** -----------------------------------------------------------------------------------------*/
+
     /**
-     *
-     * @param activeBookName
+     * TODO: show my dictionary order by time will need to load the whole dictionary
      */
-    private void switchActiveBookName(String activeBookName) {
-        if (activeBookName != null) {
-            String ifoPath = manager.getBookFilePath(activeBookName);
-            if (ifoPath == null) {
-                Log.d("error", "can not find book " + activeBookName + "'s file path");
-                return;
-            }
-            String dictPath = ifoPath.substring(0, ifoPath.lastIndexOf(".ifo")).concat(".dict");
-            File dict = new File(dictPath);
-            if (dict.isFile()) {
-                setDictFile(dict);
-                manager.setActiveBook(activeBookName);
-            }
-            wordView.setText(activeBookName);
-            resultListView.setAdapter(null);
+    private void showUserDict() {
+        UserAsyncWorkerHandler userHandler = UserAsyncWorkerHandler.getInstance(this, null);
+        userHandler.setUserDictQueryListener(this);
+        userDictAdapter = new UserDictAdapter(this, userHandler);
+        wordView.setText("Your Words");
+        resultListView.setAdapter(userDictAdapter);
+    }
+
+    private void clearUserDict() {
+        UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(this);
+        helper.clearUserWords();
+    }
+
+    /** -------------------define a callback for DictManager to update DrawerAdapter-------------*/
+
+    interface QueryCompleteCallback {
+        void onQueryComplete();
+    }
+
+    public class QueryCallback implements QueryCompleteCallback {
+        @Override
+        public void onQueryComplete() {
+            updateDrawerAdapterData();
+            Log.d(TAG, "QueryCallback");
         }
     }
+
+    /** -----------------------------------------------------------------------------------------*/
+
+    @Override
+    public void onUserDictQueryComplete(Cursor cursor) {
+        ArrayList<String> words = new ArrayList<>();
+        ArrayList<Long> times = new ArrayList<>();
+        long lastID = -1;
+
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                int idIndex = cursor.getColumnIndex("rowid");
+                int wordIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_WORD);
+                int timeIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_TIME);
+                do {
+                    words.add(cursor.getString(wordIndex));
+                    times.add(cursor.getLong(timeIndex));
+                } while (cursor.moveToNext());
+                cursor.moveToLast();
+                lastID = cursor.getLong(idIndex);
+                Log.d("lastID", "" + lastID);
+            }
+            cursor.close();
+        }
+        if (userDictAdapter != null) {
+            userDictAdapter.updateAdapterData(words, times, lastID);
+        }
+    }
+
+
+    /** -----------------------------------------------------------------------------------------*/
+
+    public void setDictFile(int type, String data) {
+        if (type == 0) {
+            /** type 0 means star dict format */
+            if (data == null) {
+                Log.d("error", "DictFormat's data field missing!");
+                return;
+            }
+            String dictPath = data.substring(0, data.lastIndexOf(".ifo")).concat(".dict");
+            File dict = new File(dictPath);
+            if (dict.isFile()) {
+                if (dictParser != null) {
+                    dictParser.closeFile();
+                }
+                dictParser = new DictParser(dict);
+            }
+        }
+    }
+
+    private class Item {
+        Long id;
+        String text;
+
+        private Item(Long id, String text) {
+            this.id = id;
+            this.text = text;
+        }
+
+        @Override
+        public String toString() {
+            return text;
+        }
+    }
+
+    /** ------------------------------------------------------------------------------------------
 
     private void setNotification(int id, String msg) {
         Notification.Builder builder = new Notification.Builder(this)
@@ -419,205 +674,23 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
+    ---------------------------------------------------------------------------------------------*/
     /**
-     *
-     * @param intent
-     * Handle the query request from SearchView's suggestion query or search query.
+     * for test
      */
-    private void handleIntent(Intent intent) {
-        Log.d(TAG, "intent action:" + intent.getAction());
-        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            /**
-             * called for SearchView's suggestion.
-             */
-            Uri uri = intent.getData();
-            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-            showWordDefinition(cursor);
-        } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
-            String query = intent.getStringExtra(SearchManager.QUERY);
-            showQueryResults(query);
-        }else if (PI2.equals(intent.getAction())) {
-            Toast.makeText(this, "Notification!-->2", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    AdapterView.OnItemClickListener resultListViewListener = new AdapterView.OnItemClickListener(){
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            if (!(parent.getAdapter().getItem(position) instanceof Item)) {
-                return;
-            }
-            Item item = (Item) parent.getAdapter().getItem(position);
-            String definition = null;
-            if (dictParser != null) {
-                definition = dictParser.getWordDefinition(item.offset, item.size);
-            }
-            if (definition == null){
-                definition = "occur error while reading dictionary file";
-            }
-            showDefinition(item.text, definition);
-        }
-    };
-
-    public void showQueryResults(String query) {
-        String countString;
-        boolean b = true;
-        ArrayAdapter<Item> words = null;
-        ContentResolver contentResolver = getContentResolver();
-        final Cursor cursor = contentResolver.query(DictContentProvider.CONTENT_URI, null, null,
-                new String[]{query}, null);
-        if (null == cursor) {
-            countString = getString(R.string.no_results, new Object[]{query});
-        } else {
-            int count = cursor.getCount();
-            countString = getResources().getQuantityString(R.plurals.search_results,
-                    count, new Object[] {count, query});
-
-            words = new ArrayAdapter<>(this, R.layout.textview_item);
-            ArrayList<Item> list = new ArrayList<>();
-            int idIndex = cursor.getColumnIndex(BaseColumns._ID);
-            int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_WORD);
-            int offsetIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_OFFSET);
-            int sizeIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_SIZE);
-            cursor.moveToFirst();
-            query = query.toLowerCase();
-            String lowerCase;
-            do {
-                String text = cursor.getString(wordIndex);
-                lowerCase = text.toLowerCase();
-                Item item = new Item(cursor.getInt(idIndex), text, cursor.getInt(offsetIndex),
-                        cursor.getInt(sizeIndex));
-                if (lowerCase.startsWith(query)) {
-                    words.add(item);
-                    //the b
-                    if (b && lowerCase.equals(query)) {
-                        String definition = null;
-                        if (dictParser != null) {
-                            definition = dictParser.getWordDefinition(item.offset, item.size);
-                        }
-                        if (definition == null){
-                            definition = "occur error while reading dictionary file";
-                        }
-                        Log.d(TAG, "-" + text);
-                        showDefinition(text, definition);
-                        b = false;
-                    }
-                } else {
-                    list.add(item);
-                }
-            } while (cursor.moveToNext());
-            words.addAll(list);
-            cursor.close();
-        }
-        if (canDismiss && b) {
-            dismissDefinition(false);
-        }
-        wordView.setText(countString);
-        resultListView.setAdapter(words);
-    }
-
-    /**
-     *
-     * @param cursor contains the definition of a word.
-     *               will create a Dialog fragment to show word definition.
-     */
-    private void showWordDefinition(Cursor cursor) {
-        if (cursor != null) {
-            cursor.moveToFirst();
-            int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_WORD);
-            int offsetIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_OFFSET);
-            int sizeIndex = cursor.getColumnIndexOrThrow(DictSQLiteOpenHelper.KEY_SIZE);
-            String word = cursor.getString(wordIndex);
-            int offset = cursor.getInt(offsetIndex);
-            int size = cursor.getInt(sizeIndex);
-            String definition = null;
-            if (dictParser != null) {
-                definition = dictParser.getWordDefinition(offset, size);
-            }
-            if (definition == null){
-                definition = "occur error while reading dictionary file";
-            }
-            showDefinition(word, definition);
-            cursor.close();
-        }
-    }
-
-    private void showDefinition(String word, String definition) {
-        if (canDismiss) {
-            definitionFragment.updateViewData(word, definition);
-        } else {
-            if (definitionFragment == null) {
-                definitionFragment = new DefinitionFragment();
-            }
-            Bundle bundle = new Bundle();
-            bundle.putString(DefinitionFragment.WORD, word);
-            bundle.putString(DefinitionFragment.DEF, definition);
-            definitionFragment.setArguments(bundle);
-            getFragmentManager().beginTransaction()
-                    .add(R.id.main_content, definitionFragment)
-                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-                    .commit();
-            canDismiss = true;
-            resultListView.setVisibility(View.INVISIBLE);
-        }
-        searchItem.collapseActionView();
-        Log.d("searchView", "clear focus");
-    }
-
-    private void dismissDefinition(boolean focus) {
-        getFragmentManager().beginTransaction()
-                .remove(definitionFragment)
-                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
-                .commit();
-        canDismiss = false;
-        resultListView.setVisibility(View.VISIBLE);
-//        if (focus) {
-//            searchView.requestFocus();
-//            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-//            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
-//        }
-        searchItem.expandActionView();
-        searchView.clearFocus();
-    }
-
-    /**
-     * TODO: show my dictionary order by time will need to load the whole dictionary
-     */
-    private void showMyDict() {
-        MyDictAdapter myDictAdapter = new MyDictAdapter(this);
-        wordView.setText("My Dict");
-        resultListView.setAdapter(myDictAdapter);
-    }
-
-    /**
-     * TODO: use WordAsyncQueryHandler to query words
-     * TODO: there are two thread to interact with two SQLiteDatabase
-     */
-
-    public void setDictFile(File dictFile) {
-        if (dictParser != null) {
-            dictParser.closeFile();
-        }
-        dictParser = new DictParser(dictFile);
-    }
-
-    private class Item {
-        int id;
-        String text;
-        int offset;
-        int size;
-
-        private Item(int id, String text, int offset, int size) {
-            this.id = id;
-            this.text = text;
-            this.offset = offset;
-            this.size = size;
-        }
-
-        @Override
-        public String toString() {
-            return text;
+    private void copy() {
+        File src = getDatabasePath(UserDictSQLiteOpenHelper.getInstance(this).getDatabaseName());
+        File dst = new File("/sdcard/test.db");
+        FileInputStream in;
+        FileOutputStream out;
+        try {
+            in = new FileInputStream(src);
+            out = new FileOutputStream(dst);
+            in.getChannel().transferTo(0, src.length(), out.getChannel());
+            in.close();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

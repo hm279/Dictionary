@@ -5,15 +5,13 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.Scroller;
 import android.widget.TextView;
 
-import com.dict.hm.dictionary.dict.MyDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 
 import java.util.HashMap;
 
@@ -45,7 +43,7 @@ public class DefinitionFragment extends Fragment {
                 Drawable drawable = getResources().getDrawable(R.drawable.ic_favorite_black_48dp);
                 favorite.setImageDrawable(drawable);
                 //TODO: store the word to my dictionary.
-                MyDictSQLiteOpenHelper helper = MyDictSQLiteOpenHelper.getInstance(getActivity());
+                UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(getActivity());
                 HashMap<String, Integer> words = new HashMap<>();
                 words.put(word, 1);
                 helper.insertWords(words);

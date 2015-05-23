@@ -2,10 +2,7 @@ package com.dict.hm.dictionary.paper;
 
 import android.app.ListFragment;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v7.app.ActionBar;
-import android.util.JsonReader;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -14,18 +11,13 @@ import android.view.View;
 import android.widget.ListView;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 
 import com.dict.hm.dictionary.PaperManagerActivity;
-import com.dict.hm.dictionary.dict.DictManager;
-import com.dict.hm.dictionary.dict.MyDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 import com.dict.hm.dictionary.R;
-import com.dict.hm.dictionary.parse.DictParser;
-
 
 
 /**
@@ -109,7 +101,6 @@ public class PaperViewerFragment extends ListFragment {
                 }
                 return true;
             case R.id.action_test:
-                copy();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -198,25 +189,6 @@ public class PaperViewerFragment extends ListFragment {
             archiveWordHandler = new ArchiveWordHandler(getActivity(), archiveWordListener);
         }
         archiveWordHandler.startArchive(words, ArchiveWordHandler.MANUAL);
-    }
-
-    /**
-     * for test
-     */
-    private void copy() {
-        File src = getActivity().getDatabasePath(MyDictSQLiteOpenHelper.getInstance(getActivity()).getDatabaseName());
-        File dst = new File("/sdcard/test.db");
-        FileInputStream in;
-        FileOutputStream out;
-        try {
-            in = new FileInputStream(src);
-            out = new FileOutputStream(dst);
-            in.getChannel().transferTo(0, src.length(), out.getChannel());
-            in.close();
-            out.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
 }

@@ -5,8 +5,7 @@ import android.os.Message;
 
 import com.dict.hm.dictionary.BaseManagerActivity;
 import com.dict.hm.dictionary.DictManagerActivity;
-import com.dict.hm.dictionary.dict.DictIndexSQLiteHelper;
-import com.dict.hm.dictionary.dict.DictWordSQLiteHelper;
+import com.dict.hm.dictionary.dict.DictSQLiteOpenHelper;
 import com.dict.hm.dictionary.parse.IdxParser;
 
 import java.io.File;
@@ -20,24 +19,20 @@ public class LoadDictionary extends Thread{
     File idxFile;
     Handler handler;
     String bookName;
-    DictWordSQLiteHelper wordHelper;
-    DictIndexSQLiteHelper indexHelper;
+    DictSQLiteOpenHelper helper;
 
-    public LoadDictionary(String bookName, File idxFile, DictWordSQLiteHelper wordHelper,
-                          DictIndexSQLiteHelper indexHelper, Handler handler) {
+    public LoadDictionary(String bookName, File idxFile, DictSQLiteOpenHelper helper, Handler handler) {
         super();
         this.idxFile = idxFile;
         this.handler = handler;
         this.bookName = bookName;
-        this.wordHelper = wordHelper;
-        this.indexHelper = indexHelper;
+        this.helper = helper;
     }
 
     @Override
     public void run() {
         try {
-            wordHelper.createTable(bookName);
-            indexHelper.createTable(bookName);
+            helper.createTable(bookName);
             loadWords(idxFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -54,8 +49,7 @@ public class LoadDictionary extends Thread{
             if (list == null || list.size() == 0) {
                 break;
             }
-            wordHelper.addWords(list);
-            indexHelper.addWords(list);
+            helper.addWords(list);
             count += list.size();
             Message message = handler.obtainMessage(DictManagerActivity.PROCESSING);
             message.arg1 = count;

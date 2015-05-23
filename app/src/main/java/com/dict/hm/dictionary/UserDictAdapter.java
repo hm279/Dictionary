@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary.dict;
+package com.dict.hm.dictionary;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,45 +7,46 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.dict.hm.dictionary.R;
-import com.dict.hm.dictionary.async.MyDictAsyncQueryHandler;
+import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 
 import java.util.ArrayList;
 
 /**
  * Created by hm on 15-5-6.
  */
-public class MyDictAdapter extends BaseAdapter
-        implements MyDictAsyncQueryHandler.MyDictQueryListener{
+public class UserDictAdapter extends BaseAdapter {
     private LayoutInflater layoutInflater;
     private int count;
-    private MyDictAsyncQueryHandler queryHandler;
+    private UserAsyncWorkerHandler queryHandler;
     ArrayList<String> words;
     ArrayList<Long> times;
+    long lastID;
 
     private static final int size = 10;
     boolean hasNext = true;
     private int queryPosition = size;
 
-    public MyDictAdapter(Context context) {
+    public UserDictAdapter(Context context, UserAsyncWorkerHandler handler) {
         count = 0;
         layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        queryHandler = new MyDictAsyncQueryHandler(MyDictSQLiteOpenHelper.getInstance(context), this);
+        queryHandler = handler;
         words = new ArrayList<>();
         times = new ArrayList<>();
 
         queryHandler.startQuery(size, 0);
     }
 
-    @Override
-    public void updateAdapterData(ArrayList<String> words, ArrayList<Long> times) {
+    public void updateAdapterData(ArrayList<String> words, ArrayList<Long> times, long lastID) {
         if (words.size() < size) {
             hasNext = false;
         }
-        this.words.addAll(words);
-        this.times.addAll(times);
-        count = this.words.size();
-        notifyDataSetChanged();
+        if (lastID > -1) {
+            this.words.addAll(words);
+            this.times.addAll(times);
+            this.lastID = lastID;
+            count = this.words.size();
+            notifyDataSetChanged();
+        }
     }
 
     @Override
@@ -85,7 +86,7 @@ public class MyDictAdapter extends BaseAdapter
          * preload words, when to start nextQuery()?
          */
         if (hasNext && (queryPosition < position + size)) {
-            queryHandler.nextQuery(size);
+            queryHandler.nextQuery(size, lastID);
             queryPosition += size;
         }
         return view;

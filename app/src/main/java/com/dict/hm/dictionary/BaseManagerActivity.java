@@ -3,6 +3,7 @@ package com.dict.hm.dictionary;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.TypedValue;
@@ -33,7 +34,7 @@ public abstract class BaseManagerActivity extends AppCompatActivity
     ImageView fab;
     FileListFragment fileListFragment;
 
-    ArrayAdapter<String> adapter;
+//    ArrayAdapter<String> adapter;
     File selectedFile;
     String title;
 
@@ -41,7 +42,9 @@ public abstract class BaseManagerActivity extends AppCompatActivity
     static final int ADD = 0;
     static final int DEL = 1;
     static final int CLEAR = 2;
-    String deleteItem;
+
+    String notification = null;
+    boolean isStop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +75,21 @@ public abstract class BaseManagerActivity extends AppCompatActivity
         super.onBackPressed();
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isStop = true;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        isStop = false;
+        if (notification != null) {
+           setNotification(notification);
+        }
+    }
+
     protected void showFragment(Fragment fragment) {
         getFragmentManager().beginTransaction()
                 .add(R.id.manager_frame, fragment, FRAGMENT_TAG)
@@ -79,8 +97,11 @@ public abstract class BaseManagerActivity extends AppCompatActivity
                 .commit();
         listView.setVisibility(View.INVISIBLE);
         empty.setVisibility(View.INVISIBLE);
-        getSupportActionBar().setHomeButtonEnabled(true);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            getSupportActionBar().setHomeButtonEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
     }
 
     protected boolean dismissFragment() {
@@ -96,18 +117,32 @@ public abstract class BaseManagerActivity extends AppCompatActivity
         if (listView.getAdapter().isEmpty()) {
             empty.setVisibility(View.VISIBLE);
         }
-        getSupportActionBar().setHomeButtonEnabled(false);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            getSupportActionBar().setHomeButtonEnabled(false);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        }
         toolbar.setTitle(title);
         fileListFragment = null;
         return true;
     }
 
+    /**
+     * after onStop() call this method (fragment's commit() method) will cause IllegalStateException.
+     *
+     * @param text
+     */
     protected void setNotification(String text) {
+        if (isStop) {
+            notification = text;
+            return;
+        } else {
+            notification = null;
+        }
         NotificationDialog dialog = NotificationDialog.newInstance(text);
         dialog.show(getFragmentManager(), null);
 
-        if (fab.isShown()) {
+        if (fab.getVisibility() == View.VISIBLE) {
             final float y = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 72,
                     getResources().getDisplayMetrics());
             fab.animate().translationYBy(-y);
@@ -123,7 +158,7 @@ public abstract class BaseManagerActivity extends AppCompatActivity
 
     public void dismissProgressDialog() {
         if (dialog != null) {
-            dialog.dismiss();
+            dialog.dismissAllowingStateLoss();
         }
     }
 
