@@ -46,8 +46,4 @@
 ![Alt text](./screenshot/drawer.png)
 
 ---
-一款优秀的应用要考虑功能，交互设计，UI设计等，不容易做到啊。要了解层级设计，符合 android 设计，写代码的时候也会把心思放在代码结构设计上，而不是用户角度考虑，常常会为了更好看的代码而牺牲使用感受，代码是程序员的宝贝啊。
-当然是用户角度考虑至上。
-
----
 Considering move main page’s menu items to drawer navigation, this will more match android design. I am thinking about where to display the dictionaries and papers.                                                                               
