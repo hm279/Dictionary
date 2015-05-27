@@ -25,6 +25,12 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     private ArrayList<DictFormat> dictFormats;
     private int active;
     private boolean inited = false;
+    /**
+     * DictManager also take control of papers
+     * the papers' file's name.
+     */
+    private File paperDir;
+    private ArrayList<String> papers;
 
     Context context;
     UserDictSQLiteOpenHelper helper;
@@ -44,10 +50,16 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         this.context = context.getApplicationContext();
         rowid = new ArrayList<>();
         dictFormats = new ArrayList<>();
+        papers = new ArrayList<>();
+        paperDir = new File(this.context.getExternalFilesDir(null), "paper");
+        if (!paperDir.exists()) {
+            paperDir.mkdirs();
+        }
         active = -1;
         queryHandler = UserAsyncWorkerHandler.getInstance(context, this);
         helper = UserDictSQLiteOpenHelper.getInstance(context);
         queryHandler.startQuery();
+        queryHandler.startList(paperDir);
     }
 
     public void removeDictionary(int position, Handler handler) {
@@ -181,6 +193,10 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         return dictFormats;
     }
 
+    public ArrayList<String> getPapers() {
+        return papers;
+    }
+
     public boolean isInited() {
         return inited;
     }
@@ -197,6 +213,37 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
                 return;
             }
         }
+    }
+
+    public void addPaper(String name) {
+        File paper = new File(paperDir, name);
+        if (paper.isFile()) {
+            papers.add(name);
+        }
+    }
+
+    public void removePaper(String name) {
+        File paper = new File(paperDir, name);
+        if (paper.exists()) {
+            paper.delete();
+        }
+        //file name is only.
+        papers.remove(name);
+    }
+
+    public void clearPaper() {
+        if (paperDir.isDirectory()) {
+            for (File file : paperDir.listFiles()) {
+                if (file.isFile()) {
+                    file.delete();
+                }
+            }
+        }
+        papers.clear();
+    }
+
+    public File getPaperDir() {
+        return paperDir;
     }
 
     public class DropTableThread extends Thread {
@@ -218,7 +265,21 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     }
 
     public void setOnQueryCompleteCallback(MainActivity.QueryCallback callback) {
-        reference = new WeakReference<MainActivity.QueryCallback>(callback);
+        reference = new WeakReference<>(callback);
+    }
+
+    @Override
+    public void onUserPaperListComplete(ArrayList<String> list) {
+        if (list != null) {
+            papers.addAll(list);
+        }
+        inited = true;
+        if (reference != null) {
+            MainActivity.QueryCallback callback = reference.get();
+            if (callback != null) {
+                callback.onQueryComplete();
+            }
+        }
     }
 
     @Override
@@ -249,13 +310,17 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
             }
             result.close();
         }
-        inited = true;
-        if (reference != null) {
-            MainActivity.QueryCallback callback = reference.get();
-            if (callback != null) {
-                callback.onQueryComplete();
-            }
-        }
+        /**
+         * startQuery() first execute, startList() second execute, so the following work let
+         * onUserPaperListComplete() do;
+         */
+//        inited = true;
+//        if (reference != null) {
+//            MainActivity.QueryCallback callback = reference.get();
+//            if (callback != null) {
+//                callback.onQueryComplete();
+//            }
+//        }
     }
 
     @Override
@@ -272,4 +337,5 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     public void onDeleteComplete(long id) {
 
     }
+
 }

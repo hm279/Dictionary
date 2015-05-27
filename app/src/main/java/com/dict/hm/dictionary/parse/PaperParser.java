@@ -161,6 +161,7 @@ public class PaperParser extends Thread{
         String text;
         try {
             Document doc = Jsoup.connect(url).timeout(5000).get();
+            Log.d("parseURL", "return parsed doc");
             FormattingVisitor formattingVisitor = new FormattingVisitor();
             NodeTraversor nodeTraversor = new NodeTraversor(formattingVisitor);
             nodeTraversor.traverse(doc);

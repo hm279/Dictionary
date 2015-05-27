@@ -24,7 +24,7 @@
         />
 
     <item android:id="@+id/action_clear_myDict"
-        android:title="Clear Words"
+        android:title="@string/action_clear_user_dict"
         android:orderInCategory="14"
         appandroid:showAsAction="never"
         />

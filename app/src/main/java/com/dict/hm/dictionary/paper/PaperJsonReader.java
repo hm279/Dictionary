@@ -10,150 +10,155 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * Created by hm on 15-3-25.
- * //TODO:Think about a better design.
  */
 public class PaperJsonReader {
-    private final Object mLock = new Object();
     File json;
     JsonReader reader;
-    ArrayList<String> keyList;
-    ArrayList<Integer> valueList;
-    HashMap<String, Integer> removedList;
-
-    ArrayList<String> keyListBackup;
-    ArrayList<Integer> valueListBackup;
+    ArrayList<JsonEntry> list;
+    ArrayList<JsonEntry> removedList;
+    private boolean needWrite = false;
 
     public PaperJsonReader(File json) {
         this.json = json;
         try {
             reader = new JsonReader(new FileReader(json));
-            reader.beginObject();
         } catch (FileNotFoundException e) {
             reader = null;
             e.printStackTrace();
+        }
+        list = new ArrayList<>();
+        removedList = new ArrayList<>();
+    }
+
+    public JsonEntry getJsonKeyValue(int position) {
+        if (list.size() > position) {
+            return list.get(position);
+        }
+        return null;
+    }
+
+    public void beginJson() {
+        try {
+            reader.beginObject();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        valueList = new ArrayList<>();
-        keyList = new ArrayList<>();
-        removedList = new HashMap<>();
-
-        keyListBackup = new ArrayList<>();
-        valueListBackup = new ArrayList<>();
     }
 
-    public String getJsonKey(int position) {
-        if (reader == null) {
-            return null;
+    public JsonEntry loadJsonKeyValue(int position) {
+        if (list.size() > position) {
+            return list.get(position);
         }
-        if (keyList.size() > position) {
-            return keyList.get(position);
-        } else {
-            String text = null;
+        JsonEntry entry = null;
+        if (reader != null) {
             try {
                 if (reader.hasNext()) {
-                    text = reader.nextName();
-                    int value = reader.nextInt();
-                    add(text, value);
-                } else {
-                    reader.endObject();
+                    entry = new JsonEntry(reader.nextName(), reader.nextInt());
+                    list.add(entry);
                 }
             } catch (IOException e) {
-                Log.d("PaperJsonAdapter", "read json error");
+                e.printStackTrace();
+                Log.d("PaperJsonReader", "read json error");
             }
-            return text;
+        }
+        return entry;
+    }
+
+    public void closeJson() {
+        try {
+            reader.close();
+            reader = null;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public int getJsonValue(int position) {
-        if (valueList.size() > position) {
-            return valueList.get(position);
+    /**
+     * when you call endObject() at last, and you call hasNext() again, it will return true,
+     * mark down and test it if needed.
+     */
+    public ArrayList<JsonEntry> readAll() {
+        if (reader != null) {
+            try {
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    list.add(new JsonEntry(reader.nextName(), reader.nextInt()));
+                }
+                reader.endObject();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.d("PaperJsonReader", "read json error");
+            } finally {
+                try {
+                    reader.close();
+                    reader = null;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-        return 0;
+        return list;
     }
 
     public int size() {
-        return keyList.size();
-    }
-
-    private void add(String key, int value) {
-        synchronized (mLock) {
-            keyList.add(key);
-            valueList.add(value);
-
-            keyListBackup.add(key);
-            valueListBackup.add(value);
-        }
+        return list.size();
     }
 
     public void remove(int position) {
-        synchronized (mLock) {
-            removedList.put(keyList.get(position), valueList.get(position));
-            keyList.remove(position);
-            valueList.remove(position);
-        }
+        removedList.add(list.get(position));
+        list.remove(position);
     }
 
-    public int restore() {
-        int size = removedList.size();
-        if (size > 0) {
-            keyList.clear();
-            valueList.clear();
-            removedList.clear();
-            keyList.addAll(keyListBackup);
-            valueList.addAll(valueListBackup);
-        }
-        return size;
-    }
-
-    public HashMap<String, Integer> getRemovedList() {
+    public ArrayList<JsonEntry> getRemovedList() {
         return removedList;
     }
 
-    public void updateJsonFile(HashMap<String, Integer> left) {
-        synchronized (mLock) {
-            if (left.size() > 0) {
-                //TODO: update json file
-                close();
-                JsonWriter jsonWriter = null;
-                try {
-                    jsonWriter = new JsonWriter(new FileWriter(json));
-                    jsonWriter.beginObject();
-                    for (HashMap.Entry<String, Integer> entry : left.entrySet()) {
-                        jsonWriter.name(entry.getKey())
-                                .value(entry.getValue());
-                    }
-                    jsonWriter.endObject();
-                    jsonWriter.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        if (jsonWriter != null) {
-                            jsonWriter.close();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            keyList.clear();
-            valueList.clear();
+    public void clearRemovedList() {
+        //manually
+        if (removedList.size() > 0) {
             removedList.clear();
+            needWrite = true;
         }
     }
 
-    public void close() {
-        try {
-            if (reader != null) {
-                reader.close();
+    public void setList(ArrayList<JsonEntry> left) {
+        //filter
+        if (left.size() < list.size()) {
+            list.clear();
+            list.addAll(left);
+            needWrite = true;
+        }
+    }
+
+    public void updateJsonFile() {
+        //TODO: should auto delete the empty json file? if so, how user know that.
+//        if (needWrite && (list.size() > 0)) {
+        if (needWrite) {
+            JsonWriter jsonWriter = null;
+            try {
+                jsonWriter = new JsonWriter(new FileWriter(json));
+                jsonWriter.beginObject();
+                for (JsonEntry entry : list) {
+                    jsonWriter.name(entry.word);
+                    jsonWriter.value(entry.count);
+                }
+                jsonWriter.endObject();
+                jsonWriter.flush();
+                needWrite = false;
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (jsonWriter != null) {
+                        jsonWriter.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

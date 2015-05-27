@@ -44,7 +44,8 @@ public class ZBarActivity extends Activity{
     boolean previewing = true;
     boolean isSurfaceViewDestroyed = true;
     boolean autoFocus;
-    boolean reverse;
+//    boolean reverse;
+    private int count = 0;
 
     static {
         System.loadLibrary("iconv");
@@ -66,13 +67,13 @@ public class ZBarActivity extends Activity{
             scanner.setConfig(0, Config.X_DENSITY, 3);
             scanner.setConfig(0, Config.Y_DENSITY, 3);
 
-            CheckBox checkBox = (CheckBox) findViewById(R.id.camera_checkbox);
-            checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    reverse = isChecked;
-                }
-            });
+//            CheckBox checkBox = (CheckBox) findViewById(R.id.camera_checkbox);
+//            checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//                @Override
+//                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                    reverse = isChecked;
+//                }
+//            });
 
             mPreview.setOnTouchListener(new View.OnTouchListener() {
                 @Override
@@ -146,8 +147,11 @@ public class ZBarActivity extends Activity{
     Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
-            if (reverse) {
+            //every three times reverse image data once
+            count++;
+            if (count > 3) {
                 reverseImageData(data);
+                count = 0;
             }
             Camera.Parameters parameters = camera.getParameters();
             Camera.Size size = parameters.getPreviewSize();

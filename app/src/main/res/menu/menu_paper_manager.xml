@@ -12,18 +12,18 @@
         android:id="@+id/action_attachment"
         android:icon="@drawable/ic_action_new_attachment"
         android:title="Attachment"
-        app:showAsAction="ifRoom"
+        app:showAsAction="always"
         />
     <item android:id="@+id/action_scan_qrcode"
         android:icon="@drawable/ic_action_qrcode"
         android:title="QR Code"
-        app:showAsAction="ifRoom"
+        app:showAsAction="always"
         />
     <item
         android:id="@+id/action_add_url"
         android:icon="@drawable/ic_action_edit_white_24dp"
         android:title="Input URL"
-        app:showAsAction="ifRoom"
+        app:showAsAction="always"
         />
 
 </menu>

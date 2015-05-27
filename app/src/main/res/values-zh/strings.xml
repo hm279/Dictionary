@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">字典</string>
+    <string name="action_clear_user_dict">清除用户字典</string>
+    <string name="action_dict">字典</string>
+    <string name="action_paper">文章</string>
+    <string name="action_search">搜索</string>
+    <string name="action_settings">设置</string>
+    <string name="action_user_dict">个人字典</string>
+    <string name="drawer_close">关闭</string>
+    <string name="drawer_open">打开</string>
+    <string name="no_results">查询不到 \"%s\"</string>
+    <string name="settings_description">设置</string>
+    <string name="title_dict">字典</string>
+    <string name="title_paper">文章</string>
+    <string name="title_paper_archive">归档</string>
+    <string name="search_hint">输入</string>
+</resources>

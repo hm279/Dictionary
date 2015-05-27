@@ -3,20 +3,15 @@ package com.dict.hm.dictionary.paper;
 import android.app.ListFragment;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
 
 import com.dict.hm.dictionary.PaperManagerActivity;
-import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 import com.dict.hm.dictionary.R;
 
 
@@ -25,10 +20,12 @@ import com.dict.hm.dictionary.R;
  */
 public class PaperViewerFragment extends ListFragment {
     public static final String TAG = "PaperViewerFragment";
+    File json;
     PaperJsonReader reader;
-    PaperJsonAdapter jsonAdapter = null;
-    Boolean isArchiving;
+    PaperJsonAdapter adapter;
+    boolean isArchiving;
 
+    PaperManagerActivity activity = null;
     Menu menu;
     ActionBar actionBar;
     ArchiveWordHandler archiveWordHandler = null;
@@ -42,21 +39,24 @@ public class PaperViewerFragment extends ListFragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setEmptyText("No Word To Show");
+        setEmptyText("No Word");
         setListShown(true);
         setListAdapter(null);
         Bundle bundle = getArguments();
         String jsonFilePath = bundle.getString(TAG);
-        File json = new File(jsonFilePath);
+        json = new File(jsonFilePath);
         reader = new PaperJsonReader(json);
-        jsonAdapter = new PaperJsonAdapter(getActivity(), reader);
-        setListAdapter(jsonAdapter);
+        setListAdapter(null);
 //        getListView().setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
 //        drawable = getListView().getSelector();
 
+        activity = (PaperManagerActivity) getActivity();
         isArchiving = false;
-        getActivity().setTitle(getActivity().getResources().getString(R.string.title_paper_archive));
+        activity.setTitle(getActivity().getResources().getString(R.string.title_paper_archive));
         actionBar = ((PaperManagerActivity) getActivity()).getSupportActionBar();
+
+        archiveWordHandler = new ArchiveWordHandler(getActivity(), archiveWordListener);
+        archiveWordHandler.startJsonRead(reader);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class PaperViewerFragment extends ListFragment {
         switch (id) {
             case R.id.action_filter:
                 /**
-                 * this will filter the word, that had been existed in MyDict.
+                 * this will filter the word, that had been existed in UserDict.
                  * And left the new words.
                  */
                 archiveALL(true);
@@ -94,12 +94,12 @@ public class PaperViewerFragment extends ListFragment {
                 archiveManual(reader.getRemovedList());
                 archiveCancel();
                 return true;
-            case android.R.id.home:
-                if (isArchiving) {
-                    archiveCancel();
-                    jsonAdapter.cancelRemove();
-                }
-                return true;
+//            case android.R.id.home:
+//                if (isArchiving) {
+//                    archiveCancel();
+//                    jsonAdapter.cancelRemove();
+//                }
+//                return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -110,15 +110,8 @@ public class PaperViewerFragment extends ListFragment {
     @Override
     public void onListItemClick(ListView l, View v, int position, long id) {
         if (isArchiving) {
-            jsonAdapter.remove(position);
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        if (reader != null) {
-            reader.close();
+            reader.remove(position);
+            adapter.notifyDataSetChanged();
         }
     }
 
@@ -151,42 +144,56 @@ public class PaperViewerFragment extends ListFragment {
 //        getListView().setSelector(drawable);
     }
 
-    public Boolean isArchiving() {
-        return isArchiving;
-    }
-
     ArchiveWordHandler.ArchiveWordListener archiveWordListener =
             new ArchiveWordHandler.ArchiveWordListener() {
                 @Override
-                public void onArchiveComplete(int what, HashMap<String, Integer> left) {
-                    Log.d("onArchiveComplete", what + "-");
+                public void onArchiveComplete(int what, ArrayList<JsonEntry> left) {
+                    activity.dismissProgressDialog();
+                    switch (what) {
+                        case ArchiveWordHandler.ALL:
+                            activity.setNotification("Archive " + reader.size() + " words");
+                            activity.deletePaper(json);
+                            break;
+                        case ArchiveWordHandler.FILTER:
+                            activity.setNotification("Archive " + (reader.size() - left.size()) + " words");
+
+                            reader.setList(left);
+                            archiveWordHandler.startJsonWrite(reader);
+                            adapter.notifyDataSetChanged();
+                            break;
+                        case ArchiveWordHandler.MANUAL:
+                            activity.setNotification("Archive " + reader.getRemovedList().size() + " words");
+
+                            reader.clearRemovedList();
+                            archiveWordHandler.startJsonWrite(reader);
+                            adapter.notifyDataSetChanged();
+                            break;
+                        case ArchiveWordHandler.JSON_READ:
+//                            adapter = new ArrayAdapter<>(getActivity(), R.layout.textview_item, reader.readAll());
+                            adapter = new PaperJsonAdapter(getActivity(), reader.readAll());
+                            setListAdapter(adapter);
+                            break;
+                        case ArchiveWordHandler.JSON_WRITE:
+                            break;
+                    }
                 }
             };
 
     private void archiveALL(boolean filter) {
-        if (archiveWordHandler == null) {
-            archiveWordHandler = new ArchiveWordHandler(getActivity(), archiveWordListener);
-        }
-        HashMap<String, Integer> words = new HashMap<>();
-        int position = 0;
-        String word;
-        while ((word = reader.getJsonKey(position)) != null) {
-            words.put(word, reader.getJsonValue(position));
-            position++;
-        }
-
+        ArrayList<JsonEntry> words = new ArrayList<>();
+        words.addAll(reader.readAll());
         if (filter) {
             archiveWordHandler.startArchive(words, ArchiveWordHandler.FILTER);
+            activity.initProgressDialog("Filter words...", 0);
         } else {
             archiveWordHandler.startArchive(words, ArchiveWordHandler.ALL);
+            activity.initProgressDialog("Archive all words", 0);
         }
     }
 
-    private void archiveManual(HashMap<String, Integer> words) {
-        if (archiveWordHandler == null) {
-            archiveWordHandler = new ArchiveWordHandler(getActivity(), archiveWordListener);
-        }
+    private void archiveManual(ArrayList<JsonEntry> words) {
         archiveWordHandler.startArchive(words, ArchiveWordHandler.MANUAL);
+        activity.initProgressDialog("Archive selected words", 0);
     }
 
 }

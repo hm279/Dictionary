@@ -30,6 +30,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity
             manager.setOnQueryCompleteCallback(callback);
         }
         /**
-         * I don't know why this need to handleIntent()
+         * I don't clearly remember why this need to handleIntent()
          * maybe the notification need this.
          */
 //        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
@@ -135,10 +136,10 @@ public class MainActivity extends AppCompatActivity
             dictParser = null;
         }
         if (jsonReader != null) {
-            jsonReader.close();
+            jsonReader.closeJson();
             jsonReader = null;
         }
-//        manager.saveActiveBook();
+        Log.d(TAG, "onDestroy");
         super.onDestroy();
     }
 
@@ -240,7 +241,8 @@ public class MainActivity extends AppCompatActivity
          * check whether the dictionary change, and update the drawerListView's data
          */
         if (manager != null) {
-            updateDrawerAdapterData();
+//            updateDrawerAdapterData();
+            drawerAdapter.notifyDataSetChanged();
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -268,14 +270,15 @@ public class MainActivity extends AppCompatActivity
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
             /**
              * called for SearchView's suggestion.
+             * exist query
              */
             Uri uri = intent.getData();
             String word = intent.getStringExtra(SearchManager.EXTRA_DATA_KEY);
             Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-            showWordDefinition(word, cursor);
+            parseDefinition(word, cursor);
         } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String query = intent.getStringExtra(SearchManager.QUERY);
-            showQueryResults(query);
+            getQueryResults(query);
         } /**else if (PI2.equals(intent.getAction())) {
          Toast.makeText(this, "Notification!-->2", Toast.LENGTH_LONG).show();
          }*/
@@ -314,6 +317,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 drawerLayout.closeDrawer(leftDrawerLayout);
+                if (canDismiss) {
+                    dismissDefinition(false);
+                }
 
                 int type = drawerAdapter.getItemViewType(position);
                 String item = (String) drawerAdapter.getItem(position);
@@ -335,7 +341,7 @@ public class MainActivity extends AppCompatActivity
 
     private void updateDrawerAdapterData() {
         drawerAdapter.setBookNames(manager.getDictFormats());
-        drawerAdapter.setPapers(getPapers());
+        drawerAdapter.setPapers(manager.getPapers());
         drawerAdapter.notifyDataSetChanged();
         switchActiveDict(manager.getActiveDict());
     }
@@ -365,43 +371,45 @@ public class MainActivity extends AppCompatActivity
                 return;
             }
             Item item = (Item) parent.getAdapter().getItem(position);
-            String definition = getWordDefinition(item.id);
-            showDefinition(item.text, definition);
+            Cursor cursor = getWordIndex(item.id);
+            parseDefinition(item.text, cursor);
         }
     };
 
-    public void showQueryResults(String query) {
+    /**
+     * have query action
+     */
+    public void getQueryResults(String word) {
         String countString;
-        boolean b = true;
+        boolean noWordEqual = true;
         ArrayAdapter<Item> words = null;
         ContentResolver contentResolver = getContentResolver();
         final Cursor cursor = contentResolver.query(DictContentProvider.CONTENT_URI, null, null,
-                new String[]{query}, null);
+                new String[]{word}, null);
         if (null == cursor) {
-            countString = getString(R.string.no_results, new Object[]{query});
+            countString = getString(R.string.no_results, new Object[]{word});
         } else {
             int count = cursor.getCount();
             countString = getResources().getQuantityString(R.plurals.search_results,
-                    count, new Object[] {count, query});
+                    count, new Object[] {count, word});
 
             words = new ArrayAdapter<>(this, R.layout.textview_item);
             ArrayList<Item> list = new ArrayList<>();
             int idIndex = cursor.getColumnIndex(BaseColumns._ID);
             int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteDefine.COLUMN_KEY_WORD);
             cursor.moveToFirst();
-            query = query.toLowerCase();
+            word = word.toLowerCase();
             String lowerCase;
             do {
                 String text = cursor.getString(wordIndex);
                 lowerCase = text.toLowerCase();
                 Item item = new Item(cursor.getLong(idIndex), text);
-                if (lowerCase.startsWith(query)) {
+                if (lowerCase.startsWith(word)) {
                     words.add(item);
-                    if (b && lowerCase.equals(query)) {
-                        String definition = getWordDefinition(item.id);
-                        showDefinition(text, definition);
-                        b = false;
-                        Log.d(TAG, "-" + text);
+                    if (noWordEqual && lowerCase.equals(word)) {
+                        //parse and show definition
+                        parseDefinition(text, getWordIndex(item.id));
+                        noWordEqual = false;
                     }
                 } else {
                     list.add(item);
@@ -410,39 +418,29 @@ public class MainActivity extends AppCompatActivity
             words.addAll(list);
             cursor.close();
         }
-        if (canDismiss && b) {
-            dismissDefinition(false);
+        //no word to show, dismiss definition
+        if (canDismiss && noWordEqual) {
+            dismissDefinition(true);
         }
         wordView.setText(countString);
         resultListView.setAdapter(words);
     }
 
-    private String getWordDefinition(long rowId) {
+    /**
+     * have query action
+     */
+    private Cursor getWordIndex(long rowId) {
         Uri uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + rowId);
-        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-        if (cursor != null) {
-            cursor.moveToFirst();
-            int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
-            int sizeIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_SIZE);
-            String wordDefinition = null;
-            if (dictParser != null) {
-                wordDefinition = dictParser.getWordDefinition(cursor.getInt(offsetIndex), cursor.getInt(sizeIndex));
-            }
-            if (wordDefinition == null) {
-                wordDefinition = "occur error while reading text from .dict file";
-            }
-            cursor.close();
-            return wordDefinition;
-        }
-        return null;
+        return getContentResolver().query(uri, null, null, null, null);
     }
 
     /**
      *
      * @param cursor contains the definition of a word.
      *               will create a Dialog fragment to show word definition.
+     * TODO: different dict format should have different parseDefinition() function;
      */
-    private void showWordDefinition(String word, Cursor cursor) {
+    private void parseDefinition(String word, Cursor cursor) {
         if (cursor != null) {
             cursor.moveToFirst();
             int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
@@ -454,6 +452,7 @@ public class MainActivity extends AppCompatActivity
                 definition = dictParser.getWordDefinition(offset, size);
             }
             if (definition == null){
+                //TODO: define the string in strings.xml
                 definition = "occur error while reading text from .dict file";
             }
             showDefinition(word, definition);
@@ -490,35 +489,25 @@ public class MainActivity extends AppCompatActivity
                 .commit();
         canDismiss = false;
         resultListView.setVisibility(View.VISIBLE);
-//        if (focus) {
+        if (focus) {
 //            searchView.requestFocus();
 //            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 //            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
-//        }
-        searchItem.expandActionView();
-        searchView.clearFocus();
+            searchItem.expandActionView();
+            searchView.clearFocus();
+        }
     }
 
     /** -----------------------------------------------------------------------------------------*/
-
-    private ArrayList<String> getPapers() {
-        ArrayList<String> papers = new ArrayList<>();
-        File paperDir = new File(getExternalFilesDir(null), "paper");
-        if (paperDir.exists()) {
-            for (String name : paperDir.list()) {
-                papers.add(name);
-            }
-        }
-        return papers;
-    }
 
     private void showPaper(String fileName) {
         File paperDir = new File(getExternalFilesDir(null), "paper");
         File paperFile = new File(paperDir, fileName);
         if (jsonReader != null) {
-            jsonReader.close();
+            jsonReader.closeJson();
         }
         jsonReader = new PaperJsonReader(paperFile);
+        jsonReader.beginJson();
         //TODO:quit the word query thread
         PaperViewerAdapter paperViewerAdapter = new PaperViewerAdapter(this, jsonReader, dictParser);
         wordView.setText(fileName);
@@ -532,16 +521,20 @@ public class MainActivity extends AppCompatActivity
      * TODO: show my dictionary order by time will need to load the whole dictionary
      */
     private void showUserDict() {
+        if (canDismiss) {
+            dismissDefinition(false);
+        }
         UserAsyncWorkerHandler userHandler = UserAsyncWorkerHandler.getInstance(this, null);
         userHandler.setUserDictQueryListener(this);
         userDictAdapter = new UserDictAdapter(this, userHandler);
-        wordView.setText("Your Words");
+        wordView.setText(R.string.action_user_dict);
         resultListView.setAdapter(userDictAdapter);
     }
 
     private void clearUserDict() {
         UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(this);
         helper.clearUserWords();
+        Toast.makeText(this, "Words Clear!", Toast.LENGTH_LONG).show();
     }
 
     /** -------------------define a callback for DictManager to update DrawerAdapter-------------*/
@@ -559,21 +552,25 @@ public class MainActivity extends AppCompatActivity
     }
 
     /** -----------------------------------------------------------------------------------------*/
-
+    //TODO: remove the lastID, sort the words by count or time. get all the words in one time.
+    //without sort this function won't help user to know their words better
     @Override
     public void onUserDictQueryComplete(Cursor cursor) {
         ArrayList<String> words = new ArrayList<>();
-        ArrayList<Long> times = new ArrayList<>();
+        ArrayList<Long> counts = new ArrayList<>();
+        ArrayList<String> times = new ArrayList<>();
         long lastID = -1;
 
         if (cursor != null) {
             if (cursor.moveToFirst()) {
                 int idIndex = cursor.getColumnIndex("rowid");
                 int wordIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_WORD);
+                int countIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_COUNT);
                 int timeIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_TIME);
                 do {
                     words.add(cursor.getString(wordIndex));
-                    times.add(cursor.getLong(timeIndex));
+                    counts.add(cursor.getLong(countIndex));
+                    times.add(cursor.getString(timeIndex));
                 } while (cursor.moveToNext());
                 cursor.moveToLast();
                 lastID = cursor.getLong(idIndex);
@@ -582,10 +579,9 @@ public class MainActivity extends AppCompatActivity
             cursor.close();
         }
         if (userDictAdapter != null) {
-            userDictAdapter.updateAdapterData(words, times, lastID);
+            userDictAdapter.updateAdapterData(words, counts, times, lastID);
         }
     }
-
 
     /** -----------------------------------------------------------------------------------------*/
 

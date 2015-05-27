@@ -6,14 +6,16 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
-import java.util.HashMap;
-import java.util.Set;
+
+import com.dict.hm.dictionary.paper.JsonEntry;
+
+import java.util.ArrayList;
 
 /**
  * Created by hm on 15-3-15.
  */
 public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
-    private static final int version = 1;
+    private static final int version = 3;
     private static final String databasename = "user.db";
 
     /** ------------------------------------------------------------------------------------------*
@@ -21,9 +23,12 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
      */
     public static final String USER_TABLE = "user";
     public static final String COLUMN_WORD = "word";
+    public static final String COLUMN_COUNT = "count";
     public static final String COLUMN_TIME = "time";
     private static final String USER_TABLE_CREATE = "CREATE TABLE IF NOT EXISTS " + USER_TABLE + "("
-            + COLUMN_WORD + " TEXT, " + COLUMN_TIME + " INTEGER);";
+            + COLUMN_WORD + " TEXT, "
+            + COLUMN_COUNT + " INTEGER, "
+            + COLUMN_TIME + " DATETIME DEFAULT CURRENT_DATE);";
 
     /** ------------------------------------------------------------------------------------------*
      * A table that record add user's dictionaries.
@@ -46,7 +51,7 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
      *
      */
 
-    private static final String queryColumn[] = {"rowid", COLUMN_TIME};
+    private static final String queryColumn[] = {"rowid", COLUMN_COUNT};
     private static final String querySelection = COLUMN_WORD + " = ?";
     private static final String updateSelection = "rowid = ?";
     /**
@@ -76,8 +81,15 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
         Log.d(databasename, "onCreate");
     }
 
+    /**
+     * Database upgrade may take a long time, you should not call method getReadableDatabase() or
+     * getWritableDatabase() from the application main thread, including from
+     * ContentProvider.onCreate().
+     */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+//        db.execSQL("DROP TABLE IF EXISTS [" + USER_TABLE + "]");
+//        onCreate(db);
         Log.d(databasename, "onUpgrade");
     }
 
@@ -113,41 +125,42 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
         database.delete(USER_TABLE, null, null);
     }
 
-    public void insertWords(HashMap<String, Integer> words) {
+    public void insertWords(ArrayList<JsonEntry> words) {
         insertWords(words, false);
     }
 
-    public HashMap<String, Integer> filterWords(HashMap<String, Integer> words) {
+    public ArrayList<JsonEntry> filterWords(ArrayList<JsonEntry> words) {
         return insertWords(words, true);
     }
 
-    private HashMap<String, Integer> insertWords(HashMap<String, Integer> words, boolean filter) {
+    private ArrayList<JsonEntry> insertWords(ArrayList<JsonEntry> words, boolean filter) {
         if (database == null) {
             database = getWritableDatabase();
         }
         database.beginTransaction();
 
-        HashMap<String, Integer> left = new HashMap<>();
-        long time;
-        Set<String> strings = words.keySet();
-        for (String word : strings) {
+        ArrayList<JsonEntry> left = new ArrayList<>();
+        long count;
+        String word;
+        long increase;
+        for (JsonEntry entry: words) {
+            word = entry.getWord();
+            increase = entry.getCount();
             Index result = queryWord(word);
-            int increase = words.get(word);
             if (result != null) {
-                if (Long.MAX_VALUE - result.time < increase) {
-                    time = Long.MAX_VALUE;
+                if (Long.MAX_VALUE - result.count < increase) {
+                    count = Long.MAX_VALUE;
                 } else {
-                    time = result.time + increase;
+                    count = result.count + increase;
                 }
-                updateWord(result.id, time);
+                updateWord(result.id, count);
             } else {
                 if (filter) {
-                    left.put(word, increase);
+                    left.add(entry);
                 } else {
                     insertWord(word, increase);
                 }
             }
-            Log.d("Insert word", word + "-" + increase);
         }
         database.setTransactionSuccessful();
         database.endTransaction();
@@ -165,16 +178,16 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
 //                new String[]{Long.toString(size), Long.toString(offset)}, null, null, queryOrderBy);
     }
 
-    private long insertWord(String word, int time) {
+    private long insertWord(String word, long count) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_WORD, word);
-        values.put(COLUMN_TIME, time);
+        values.put(COLUMN_COUNT, count);
         return database.insert(USER_TABLE, null, values);
     }
 
-    private long updateWord(long id, long time) {
+    private long updateWord(long id, long count) {
         ContentValues values = new ContentValues();
-        values.put(COLUMN_TIME, time);
+        values.put(COLUMN_COUNT, count);
         return database.update(USER_TABLE, values, updateSelection, new String[]{Long.toString(id)});
     }
 
@@ -185,7 +198,7 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
         if (cursor != null && cursor.getCount() > 0) {
             cursor.moveToFirst();
             int idIndex = cursor.getColumnIndex("rowid");
-            int timeIndex = cursor.getColumnIndex(COLUMN_TIME);
+            int timeIndex = cursor.getColumnIndex(COLUMN_COUNT);
             long id = cursor.getLong(idIndex);
             long time = cursor.getLong(timeIndex);
             result = new Index(id, time);
@@ -198,11 +211,11 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
 
     private class Index {
         long id;
-        long time;
+        long count;
 
-        public Index(long id, long time) {
+        public Index(long id, long count) {
             this.id = id;
-            this.time = time;
+            this.count = count;
         }
     }
 

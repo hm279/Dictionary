@@ -12,8 +12,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.paper.JsonEntry;
+import com.dict.hm.dictionary.paper.PaperJsonReader;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * Created by hm on 15-3-6.
@@ -44,8 +46,9 @@ public class DefinitionFragment extends Fragment {
                 favorite.setImageDrawable(drawable);
                 //TODO: store the word to my dictionary.
                 UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(getActivity());
-                HashMap<String, Integer> words = new HashMap<>();
-                words.put(word, 1);
+                ArrayList<JsonEntry> words = new ArrayList<>();
+                JsonEntry entry = new JsonEntry(word, 1);
+                words.add(entry);
                 helper.insertWords(words);
             }
         });

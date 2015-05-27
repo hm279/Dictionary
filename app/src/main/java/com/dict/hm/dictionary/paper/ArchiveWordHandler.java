@@ -9,7 +9,7 @@ import android.os.Message;
 import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * Created by hm on 15-5-5.
@@ -19,6 +19,8 @@ public class ArchiveWordHandler extends Handler {
     public static final int ALL = 0;
     public static final int FILTER = 1;
     public static final int MANUAL = 2;
+    public static final int JSON_READ = 3;
+    public static final int JSON_WRITE = 4;
 
     private static Looper sLooper = null;
 
@@ -27,22 +29,24 @@ public class ArchiveWordHandler extends Handler {
     ArchiveWordListener listener;
 
     public interface ArchiveWordListener {
-        void onArchiveComplete(int what, HashMap<String, Integer> left);
+        void onArchiveComplete(int what, ArrayList<JsonEntry> left);
     }
 
     @Override
     public void handleMessage(Message msg) {
-        switch (msg.what) {
-            case ALL:
-            case MANUAL:
-                listener.onArchiveComplete(msg.what, null);
-                break;
-            case FILTER:
-                listener.onArchiveComplete(FILTER, (HashMap<String, Integer>) msg.obj);
-                break;
-            default:
-                super.handleMessage(msg);
-        }
+        listener.onArchiveComplete(msg.what, (ArrayList<JsonEntry>) msg.obj);
+//        switch (msg.what) {
+//            case ALL:
+//            case MANUAL:
+//                listener.onArchiveComplete(msg.what, null);
+//                break;
+//            case FILTER:
+//                break;
+//            case JSON_READ:
+//                listener.onArchiveComplete(msg.what,null);
+//            default:
+//                super.handleMessage(msg);
+//        }
     }
 
     public ArchiveWordHandler(Context context, ArchiveWordListener listener) {
@@ -62,16 +66,22 @@ public class ArchiveWordHandler extends Handler {
     /**
      *
      */
-    public void startArchive(HashMap<String, Integer> words, int type) {
+    public void startArchive(ArrayList<JsonEntry> words, int type) {
         Message message = handler.obtainMessage(type);
         message.obj = words;
         message.sendToTarget();
     }
 
-    public void quit() {
-        if (sLooper != null) {
-            sLooper.quit();
-        }
+    public void startJsonRead(PaperJsonReader reader) {
+        Message message = handler.obtainMessage(JSON_READ);
+        message.obj = reader;
+        message.sendToTarget();
+    }
+
+    public void startJsonWrite(PaperJsonReader reader) {
+        Message message = handler.obtainMessage(JSON_WRITE);
+        message.obj = reader;
+        message.sendToTarget();
     }
 
     private class WorkerHandler extends Handler {
@@ -86,23 +96,31 @@ public class ArchiveWordHandler extends Handler {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case ALL:
-                    helper.insertWords((HashMap<String, Integer>) msg.obj);
+                    helper.insertWords((ArrayList<JsonEntry>) msg.obj);
                     replyMessage(msg.what, null);
                     break;
                 case FILTER:
-                    HashMap<String, Integer> left;
-                    left = helper.filterWords((HashMap<String, Integer>) msg.obj);
+                    ArrayList<JsonEntry> left;
+                    left = helper.filterWords((ArrayList<JsonEntry>) msg.obj);
                     replyMessage(msg.what, left);
                     break;
                 case MANUAL:
-                    helper.insertWords((HashMap<String, Integer>) msg.obj);
+                    helper.insertWords((ArrayList<JsonEntry>) msg.obj);
                     replyMessage(msg.what, null);
                     break;
-                default:
+                case JSON_READ:
+                    PaperJsonReader reader = (PaperJsonReader) msg.obj;
+                    reader.readAll();
+                    replyMessage(msg.what, null);
+                    break;
+                case JSON_WRITE:
+                    ((PaperJsonReader) msg.obj).updateJsonFile();
+                    replyMessage(msg.what, null);
+                    break;
             }
         }
 
-        private void replyMessage(int what, HashMap<String, Integer> words) {
+        private void replyMessage(int what, ArrayList<JsonEntry> words) {
             Handler mUIHandler = handlerWeakReference.get();
             if (mUIHandler != null) {
                 Message message = mUIHandler.obtainMessage(what);

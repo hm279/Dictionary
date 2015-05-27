@@ -10,7 +10,7 @@
         android:id="@+id/camera_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
+<!--
     <CheckBox
         android:id="@+id/camera_checkbox"
         android:text="@string/camera_checkbox"
@@ -20,4 +20,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|bottom"
         android:checked="false" />
+        -->
+
 </FrameLayout>

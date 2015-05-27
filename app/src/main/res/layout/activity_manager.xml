@@ -44,13 +44,12 @@
         android:background="@drawable/floating_button"
 
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
         android:layout_marginBottom="24dp"
+
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="24dp"
+        android:layout_marginEnd="24dp"
         />
-        <!--android:layout_alignParentEnd="true"-->
-        <!--android:layout_alignParentRight="true"-->
-        <!--android:layout_marginRight="24dp"-->
-        <!--android:layout_marginEnd="24dp"-->
-        <!--/>-->
 
 </RelativeLayout>

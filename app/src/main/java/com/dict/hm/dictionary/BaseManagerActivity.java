@@ -132,7 +132,7 @@ public abstract class BaseManagerActivity extends AppCompatActivity
      *
      * @param text
      */
-    protected void setNotification(String text) {
+    public void setNotification(String text) {
         if (isStop) {
             notification = text;
             return;

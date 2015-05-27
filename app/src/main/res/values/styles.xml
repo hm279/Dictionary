@@ -28,7 +28,9 @@
         <!-- set the text color of the overflow menu item in the top right -->
         <!--<item name="android:itemTextAppearance">@style/menuItemTextAppearance</item>-->
 
+        <!-- can set the SearchView's suggestions text color -->
         <!--<item name="android:dropDownItemStyle">@style/myDropDownItemStyle</item>-->
+
         <!--<item name="android:dropDownListViewStyle">@style/dropDownListViewStyle.light</item>-->
         <!--<item name="android:listViewStyle">@style/myListViewStyle.light</item>-->
     </style>

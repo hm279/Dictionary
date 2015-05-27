@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 
+import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.lib.ZBarActivity;
 import com.dict.hm.dictionary.paper.PaperViewerFragment;
 import com.dict.hm.dictionary.parse.PaperParser;
@@ -32,6 +33,9 @@ public class PaperManagerActivity extends BaseManagerActivity {
     PaperViewerFragment paperViewerFragment = null;
     String url = null;
     int type;
+    boolean existed = false;
+    boolean overwrite = false;
+    DictManager manager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,14 +43,12 @@ public class PaperManagerActivity extends BaseManagerActivity {
         title = getString(R.string.title_paper);
         empty.setText("No Paper");
         setTitle(title);
-        paperDir = new File(getExternalFilesDir(null), "paper");
-        if (!paperDir.exists()) {
-            paperDir.mkdirs();
-        }
+        manager = DictManager.getInstance(this);
+        paperDir = manager.getPaperDir();
 
         listView.setOnItemClickListener(paperClickListener);
         listView.setOnItemLongClickListener(paperLongClickListener);
-        adapter = new ArrayAdapter<>(this, R.layout.textview_item, getListViewData());
+        adapter = new ArrayAdapter<>(this, R.layout.textview_item, manager.getPapers());
         listView.setAdapter(adapter);
     }
 
@@ -78,9 +80,6 @@ public class PaperManagerActivity extends BaseManagerActivity {
                 startActivityForResult(intent, 0);
                 return true;
             case android.R.id.home:
-                if (paperViewerFragment != null && paperViewerFragment.isArchiving()) {
-                    return false;
-                }
                 dismissFragment();
                 return true;
         }
@@ -96,16 +95,19 @@ public class PaperManagerActivity extends BaseManagerActivity {
         if (resultCode == Activity.RESULT_OK) {
             ArrayList<String> list = data.getStringArrayListExtra(ZBarActivity.RESULT);
             if (list.size() == 1) {
-                onEditDialogPositiveClick(list.get(0));
-                Log.v("result", list.get(0));
+                EditDialog editDialog = EditDialog.newInstance("Scan result", list.get(0), "Add");
+                editDialog.show(getFragmentManager(), null);
+//                onEditDialogPositiveClick(list.get(0));
+//                Log.v("result", list.get(0));
             } else if (list.size() > 1) {
                 //TODO: handle more than one scanning result.
-                onEditDialogPositiveClick(list.get(0));
+                EditDialog editDialog = EditDialog.newInstance("Scan result", list.get(0), "Add");
+                editDialog.show(getFragmentManager(), null);
+//                onEditDialogPositiveClick(list.get(0));
             }
         }
     }
 
-    boolean existed = false;
     /**
      *
      * @param url
@@ -176,21 +178,25 @@ public class PaperManagerActivity extends BaseManagerActivity {
                 Log.d("add paper", "start...");
                 break;
             case CLEAR:
-                if (paperDir.isDirectory()) {
-                    for (File file : paperDir.listFiles()) {
-                        if (file.isFile()) {
-                            file.delete();
-                        }
-                    }
-                }
-                adapter.clear();
+                manager.clearPaper();
+                adapter.notifyDataSetChanged();
+//                if (paperDir.isDirectory()) {
+//                    for (File file : paperDir.listFiles()) {
+//                        if (file.isFile()) {
+//                            file.delete();
+//                        }
+//                    }
+//                }
+//                adapter.clear();
                 break;
             case DEL:
-                File paperFile = new File(paperDir, deleteItem);
-                if (paperFile.isFile()) {
-                    paperFile.delete();
-                }
-                adapter.remove(deleteItem);
+                manager.removePaper(deleteItem);
+                adapter.notifyDataSetChanged();
+//                File paperFile = new File(paperDir, deleteItem);
+//                if (paperFile.isFile()) {
+//                    paperFile.delete();
+//                }
+//                adapter.remove(deleteItem);
                 break;
         }
         action = -1;
@@ -219,16 +225,21 @@ public class PaperManagerActivity extends BaseManagerActivity {
         return true;
     }
 
-    private ArrayList<String> getListViewData() {
-        ArrayList<String> strings = new ArrayList<>();
-        if (paperDir.exists()) {
-            for (String name : paperDir.list()) {
-                strings.add(name);
-            }
-        }
-        return strings;
-    }
+//    private ArrayList<String> getListViewData() {
+//        ArrayList<String> strings = new ArrayList<>();
+//        if (paperDir.exists()) {
+//            for (String name : paperDir.list()) {
+//                strings.add(name);
+//            }
+//        }
+//        return strings;
+//    }
 
+    public void deletePaper(File json) {
+        adapter.remove(json.getName());
+        json.delete();
+        dismissFragment();
+    }
     /**
      *
      * @param out
@@ -241,7 +252,10 @@ public class PaperManagerActivity extends BaseManagerActivity {
             new PaperParser(selectedFile, out, "UTF-8", PaperParser.HTML, handler).start();
         } else if (type == PaperParser.URL) {
             new PaperParser(url, out, handler).start();
+        } else {
+            return;
         }
+        overwrite = out.exists();
         initProgressDialog("Parsing...", 0);
     }
 
@@ -259,8 +273,7 @@ public class PaperManagerActivity extends BaseManagerActivity {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             paperViewerFragment = new PaperViewerFragment();
-            String json = paperDir.getAbsolutePath() + File.separator +
-                    parent.getItemAtPosition(position).toString();
+            String json = paperDir.getAbsolutePath() + File.separator + parent.getItemAtPosition(position);
             Bundle bundle = new Bundle();
             bundle.putString(PaperViewerFragment.TAG, json);
             paperViewerFragment.setArguments(bundle);
@@ -285,17 +298,23 @@ public class PaperManagerActivity extends BaseManagerActivity {
         public boolean handleMessage(Message msg) {
             switch (msg.what) {
                 case ERR:    // something wrong happened
-                    Log.d("msg.what", "-1");
+                    dismissProgressDialog();
+                    setNotification("failed to get html");
                     return true;
                 case DELETE: //delete paper
                     setNotification(msg.obj + " has been removed");
-                    adapter.remove((String) msg.obj);
+//                    adapter.remove((String) msg.obj);
                     return true;
                 case OK: // done parsing paper
                     dismissProgressDialog();
                     setNotification(msg.obj + " has been added");
-                    adapter.remove((String) msg.obj);
-                    adapter.add((String) msg.obj);
+
+                    if (!overwrite) {
+                        manager.addPaper((String) msg.obj);
+                        adapter.notifyDataSetChanged();
+                    }
+//                    adapter.remove((String) msg.obj);
+//                    adapter.add((String) msg.obj);
                     return true;
                 default:
                     return false;

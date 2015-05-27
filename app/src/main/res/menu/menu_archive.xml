@@ -4,13 +4,14 @@
 
     <item
         app:showAsAction="ifRoom"
-        android:id="@+id/action_filter"
-        android:title="Filter"
-        />
-    <item
-        app:showAsAction="ifRoom"
         android:id="@+id/action_archive"
         android:title="All"
+        />
+
+    <item
+        app:showAsAction="ifRoom"
+        android:id="@+id/action_filter"
+        android:title="Filter"
         />
 
     <item

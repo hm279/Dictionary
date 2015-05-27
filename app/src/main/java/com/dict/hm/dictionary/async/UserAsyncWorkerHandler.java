@@ -10,7 +10,9 @@ import android.os.Message;
 import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 /**
  * Created by hm on 15-5-6.
@@ -21,6 +23,7 @@ public class UserAsyncWorkerHandler extends Handler {
     private static final int EVENT_ARG_UPDATE = 3;
     private static final int EVENT_ARG_DELETE = 4;
     private static final int EVENT_USER_QUERY = 5;
+    private static final int EVENT_USER_LIST = 6;
 
     private static Looper sLooper = null;
     private Handler mWorkerThreadHandler;
@@ -38,6 +41,7 @@ public class UserAsyncWorkerHandler extends Handler {
         Handler handler;
         Cursor result;
         DictFormat format;
+        Object object;
     }
 
     protected class WorkerHandler extends Handler {
@@ -68,6 +72,19 @@ public class UserAsyncWorkerHandler extends Handler {
                     break;
                 case EVENT_USER_QUERY:
                     args.result = helper.getWords(args.arg1, args.arg2);
+                    break;
+                case EVENT_USER_LIST:
+                    File dir = (File) args.object;
+                    if (dir.isDirectory()) {
+                        String[] names = dir.list();
+                        ArrayList<String> list = new ArrayList<>(names.length);
+                        for (String name : dir.list()) {
+                            list.add(name);
+                        }
+                        args.object = list;
+                    } else {
+                        args.object = null;
+                    }
                     break;
                 default:
                     return;
@@ -129,8 +146,24 @@ public class UserAsyncWorkerHandler extends Handler {
                 }
                 listener.onUserDictQueryComplete(args.result);
                 break;
+            case EVENT_USER_LIST:
+                callback.onUserPaperListComplete((ArrayList<String>) args.object);
+                break;
         }
     }
+
+    /**
+     * start to get a list names of papers
+     */
+    public void startList(File paperDir) {
+        WorkerArgs args = new WorkerArgs();
+        args.handler = this;
+        args.object = paperDir;
+        Message message = mWorkerThreadHandler.obtainMessage(EVENT_USER_LIST);
+        message.obj = args;
+        message.sendToTarget();
+    }
+
 
     public void startQuery() {
         WorkerArgs args = new WorkerArgs();
@@ -192,6 +225,7 @@ public class UserAsyncWorkerHandler extends Handler {
         void onInsertComplete(long id);
         void onUpdateComplete(long id);
         void onDeleteComplete(long id);
+        void onUserPaperListComplete(ArrayList<String> list);
     }
 
     //TODO: maybe add a async worker to load paper
