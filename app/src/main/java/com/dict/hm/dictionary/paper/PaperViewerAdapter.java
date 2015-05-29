@@ -8,6 +8,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
@@ -24,6 +26,7 @@ import java.util.ArrayList;
  */
 public class PaperViewerAdapter extends BaseAdapter
         implements WordAsyncQueryHandler.AsyncQueryListener{
+//    private Context context;
     private LayoutInflater inflater;
     private WordAsyncQueryHandler queryWord;
     private DictParser parser;
@@ -39,10 +42,13 @@ public class PaperViewerAdapter extends BaseAdapter
     private static final int preloadSize = 5;
     private boolean hasNext = true;
 
+//    private int mark = 0;
+
     public PaperViewerAdapter(Context context, PaperJsonReader reader, DictParser parser) {
+//        this.context = context;
         this.parser = parser;
-        inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         this.reader = reader;
+        inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         definitions = new ArrayList<>();
         queryWord = new WordAsyncQueryHandler(context.getContentResolver(), this);
         uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + "word");
@@ -58,8 +64,8 @@ public class PaperViewerAdapter extends BaseAdapter
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        long start, end;
-        start = SystemClock.currentThreadTimeMillis();
+//        long start, end;
+//        start = SystemClock.currentThreadTimeMillis();
 
         View view;
         if (convertView != null) {
@@ -78,9 +84,14 @@ public class PaperViewerAdapter extends BaseAdapter
         if (hasNext && (queryPosition < position + preloadSize)) {
             preload();
         }
+//        if (position == mark) {
+//            Animation animation = AnimationUtils
+//                    .loadAnimation(context, R.anim.abc_slide_in_bottom);
+//            view.startAnimation(animation);
+//        }
 
-        end = SystemClock.currentThreadTimeMillis();
-        Log.d("preload", "time-" + (end - start));
+//        end = SystemClock.currentThreadTimeMillis();
+//        Log.d("preload", "time-" + (end - start));
 
         return view;
     }
@@ -150,6 +161,7 @@ public class PaperViewerAdapter extends BaseAdapter
         if (token < preloadSize) {
             notifyDataSetChanged();
         }
+//        mark = token;
     }
 
     private String getDefinition(int offset, int size) {

@@ -40,7 +40,7 @@ public class PaperJsonReader {
         return null;
     }
 
-    public void beginJson() {
+    public void openJson() {
         try {
             reader.beginObject();
         } catch (IOException e) {

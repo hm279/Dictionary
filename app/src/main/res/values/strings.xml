@@ -28,5 +28,12 @@
     <string name="drawer_open">open</string>
     <string name="drawer_close">close</string>
 
+    <string name="drawer_personal_dict">Personal dictionary</string>
+    <string name="drawer_dict_switch">Switch dictionary</string>
+    <string name="drawer_paper_list">Paper list</string>
+    <string name="drawer_dict_manager">Manage dictionary</string>
+    <string name="drawer_paper_manager">Manager paper</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_about">About</string>
 
 </resources>

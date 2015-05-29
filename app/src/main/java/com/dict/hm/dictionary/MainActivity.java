@@ -1,5 +1,6 @@
 package com.dict.hm.dictionary;
 
+import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.app.SearchManager;
 import android.content.ContentResolver;
@@ -40,6 +41,7 @@ import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
 import com.dict.hm.dictionary.paper.PaperJsonReader;
 import com.dict.hm.dictionary.paper.PaperViewerAdapter;
+import com.dict.hm.dictionary.paper.PaperViewerFragment;
 import com.dict.hm.dictionary.parse.DictParser;
 
 import java.io.File;
@@ -50,7 +52,8 @@ import java.util.ArrayList;
 
 
 public class MainActivity extends AppCompatActivity
-        implements UserAsyncWorkerHandler.UserDictQueryListener{
+        implements UserAsyncWorkerHandler.UserDictQueryListener,
+        SwitchDictDialog.SwitchDictDialogListener{
 
     private String TAG = "MainActivity";
 
@@ -58,7 +61,7 @@ public class MainActivity extends AppCompatActivity
     private DrawerLayout drawerLayout;
     private LinearLayout leftDrawerLayout;
     private ActionBarDrawerToggle drawerToggle;
-    private DrawerListViewAdapter drawerAdapter;
+    private NavigationDrawerAdapter adapter;
 
     private SearchView searchView;
     private DefinitionFragment definitionFragment = null;
@@ -66,6 +69,10 @@ public class MainActivity extends AppCompatActivity
     private ListView resultListView;
     private MenuItem searchItem;
     private boolean canDismiss = false;
+
+    private final int action_query_word = 0;
+    private final int action_show_paper = 1;
+    private int listAction;
 
     private DictParser dictParser = null;
     private DictManager manager = null;
@@ -94,10 +101,10 @@ public class MainActivity extends AppCompatActivity
         wordView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         resultListView.addHeaderView(wordView);
 
-        initDrawerNavigation();
+        initNavigationDrawer();
         manager = DictManager.getInstance(this);
         if (manager.isInited()) {
-            updateDrawerAdapterData();
+            updateDictData();
         } else {
             QueryCallback callback = new QueryCallback();
             manager.setOnQueryCompleteCallback(callback);
@@ -150,7 +157,8 @@ public class MainActivity extends AppCompatActivity
             return;
         }
         if (canDismiss) {
-            dismissDefinition(true);
+//            dismissDefinition(true);
+            dismissFragment();
             return;
         }
         super.onBackPressed();
@@ -241,8 +249,7 @@ public class MainActivity extends AppCompatActivity
          * check whether the dictionary change, and update the drawerListView's data
          */
         if (manager != null) {
-//            updateDrawerAdapterData();
-            drawerAdapter.notifyDataSetChanged();
+//            update adapter data;
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -284,9 +291,9 @@ public class MainActivity extends AppCompatActivity
          }*/
     }
 
-    /** ----------------------------Drawer navigation--------------------------------------------*/
+    /** ----------------------------Navigation drawer --------------------------------------------*/
 
-    private void initDrawerNavigation() {
+    private void initNavigationDrawer() {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawerLayout.setStatusBarBackgroundColor(getResources().getColor(
                 R.color.material_teal_700));
@@ -311,38 +318,42 @@ public class MainActivity extends AppCompatActivity
         drawerLayout.setDrawerListener(drawerToggle);
 
         ListView drawerListView = (ListView) findViewById(R.id.drawer_listView);
-        drawerAdapter = new DrawerListViewAdapter(this);
-        drawerListView.setAdapter(drawerAdapter);
+        adapter = new NavigationDrawerAdapter(this);
+        drawerListView.setAdapter(adapter);
         drawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 drawerLayout.closeDrawer(leftDrawerLayout);
                 if (canDismiss) {
-                    dismissDefinition(false);
+//                    dismissDefinition(false);
+                    dismissFragment();
                 }
-
-                int type = drawerAdapter.getItemViewType(position);
-                String item = (String) drawerAdapter.getItem(position);
-                if (type == DrawerListViewAdapter.TYPE_ITEM_BOOK) {
-                    switchActiveDict((int) drawerAdapter.getItemId(position));
-                    drawerAdapter.notifyDataSetChanged();
-                } else if (type == DrawerListViewAdapter.TYPE_ITEM_PAPER) {
-                    showPaper(item);
-                } else if (type == DrawerListViewAdapter.TYPE_TITLE) {
-                    if (position == 0) {
+                switch (adapter.getItemViewType(position)) {
+                    case NavigationDrawerAdapter.PERSONAL_DICT:
+                        showUserDict();
+                        break;
+                    case NavigationDrawerAdapter.SWITCH_DICT:
+                        showSwitchDictDialog();
+                        break;
+                    case NavigationDrawerAdapter.LIST_PAPER:
+                        listPaper();
+                        break;
+                    case NavigationDrawerAdapter.MANAGE_DICT:
                         startManagerActivity(R.id.action_add_dict);
-                    } else {
+                        break;
+                    case NavigationDrawerAdapter.MANAGE_PAPER:
                         startManagerActivity(R.id.action_add_paper);
-                    }
+                        break;
+                    case NavigationDrawerAdapter.SETTINGS:
+                        break;
+                    case NavigationDrawerAdapter.ABOUT:
+                        break;
                 }
             }
         });
     }
 
-    private void updateDrawerAdapterData() {
-        drawerAdapter.setBookNames(manager.getDictFormats());
-        drawerAdapter.setPapers(manager.getPapers());
-        drawerAdapter.notifyDataSetChanged();
+    private void updateDictData() {
         switchActiveDict(manager.getActiveDict());
     }
 
@@ -352,11 +363,37 @@ public class MainActivity extends AppCompatActivity
         if (format != null) {
             setDictFile(format.getType(), format.getData());
             manager.setActiveDict(active);
-            wordView.setText(format.getName());
-        } else {
-            wordView.setText("");
+//            wordView.setText(format.getName());
+//        } else {
+//            wordView.setText("");
         }
-        resultListView.setAdapter(null);
+//        resultListView.setAdapter(null);
+    }
+
+    /** ----------------------------Switch dictionary--------------------------------------------*/
+
+    private void showSwitchDictDialog() {
+        ArrayList<DictFormat> arrayList = manager.getDictFormats();
+        if (arrayList.size() < 1) {
+            Toast.makeText(this, "Haven't got any dictionary", Toast.LENGTH_LONG).show();
+            return;
+        }
+        CharSequence[] items = new CharSequence[arrayList.size()];
+        for (int i = 0; i < arrayList.size(); i++) {
+            items[i] = arrayList.get(i).getName();
+        }
+
+        Bundle bundle = new Bundle();
+        bundle.putCharSequenceArray(SwitchDictDialog.ARRAY_DATA, items);
+        bundle.putInt(SwitchDictDialog.CHECKED, manager.getActiveDict());
+        SwitchDictDialog dialog = new SwitchDictDialog();
+        dialog.setArguments(bundle);
+        dialog.show(getFragmentManager(), null);
+    }
+
+    @Override
+    public void onSwitchDictClick(int which) {
+        switchActiveDict(which);
     }
 
     /** ----------------------------Search and Query---------------------------------------------*/
@@ -367,12 +404,13 @@ public class MainActivity extends AppCompatActivity
     AdapterView.OnItemClickListener resultListViewListener = new AdapterView.OnItemClickListener(){
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            if (!(parent.getAdapter().getItem(position) instanceof Item)) {
-                return;
+            if (listAction == action_query_word) {
+                Item item = (Item) parent.getAdapter().getItem(position);
+                Cursor cursor = getWordIndex(item.id);
+                parseDefinition(item.text, cursor);
+            } else if (listAction == action_show_paper){
+                showPaper((String) parent.getAdapter().getItem(position));
             }
-            Item item = (Item) parent.getAdapter().getItem(position);
-            Cursor cursor = getWordIndex(item.id);
-            parseDefinition(item.text, cursor);
         }
     };
 
@@ -424,6 +462,7 @@ public class MainActivity extends AppCompatActivity
         }
         wordView.setText(countString);
         resultListView.setAdapter(words);
+        listAction = action_query_word;
     }
 
     /**
@@ -461,7 +500,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void showDefinition(String word, String definition) {
-        if (canDismiss) {
+        if (canDismiss && definitionFragment != null) {
             definitionFragment.updateViewData(word, definition);
         } else {
             if (definitionFragment == null) {
@@ -471,24 +510,27 @@ public class MainActivity extends AppCompatActivity
             bundle.putString(DefinitionFragment.WORD, word);
             bundle.putString(DefinitionFragment.DEF, definition);
             definitionFragment.setArguments(bundle);
-            getFragmentManager().beginTransaction()
-                    .add(R.id.main_content, definitionFragment)
-                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-                    .commit();
-            canDismiss = true;
-            resultListView.setVisibility(View.INVISIBLE);
+//            getFragmentManager().beginTransaction()
+//                    .add(R.id.main_content, definitionFragment)
+//                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+//                    .commit();
+//            canDismiss = true;
+//            resultListView.setVisibility(View.INVISIBLE);
+            displayFragment(definitionFragment);
         }
         searchItem.collapseActionView();
         Log.d("searchView", "clear focus");
     }
 
     private void dismissDefinition(boolean focus) {
-        getFragmentManager().beginTransaction()
-                .remove(definitionFragment)
-                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
-                .commit();
-        canDismiss = false;
-        resultListView.setVisibility(View.VISIBLE);
+//        getFragmentManager().beginTransaction()
+//                .remove(definitionFragment)
+//                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
+//                .commit();
+//        canDismiss = false;
+//        resultListView.setVisibility(View.VISIBLE);
+        dismissFragment();
+        definitionFragment = null;
         if (focus) {
 //            searchView.requestFocus();
 //            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -498,37 +540,86 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /** -----------------------------------------------------------------------------------------*/
+    /** ----------------------------Paper viewer-------------------------------------------------*/
+
+    private void listPaper() {
+        ArrayList<String> papers = manager.getPapers();
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.textview_item, papers);
+        resultListView.setAdapter(adapter);
+        wordView.setText(R.string.drawer_paper_list);
+        listAction = action_show_paper;
+    }
 
     private void showPaper(String fileName) {
-        File paperDir = new File(getExternalFilesDir(null), "paper");
-        File paperFile = new File(paperDir, fileName);
+        Bundle bundle = new Bundle();
+        bundle.putString(PaperViewerFragment.PAPERNAME, fileName);
+        PaperViewerFragment fragment = new PaperViewerFragment();
+        fragment.setArguments(bundle);
+        displayFragment(fragment);
+    }
+
+    /**
+    private void showPaper(String fileName) {
+        File paperFile = new File(manager.getPaperDir(), fileName);
         if (jsonReader != null) {
             jsonReader.closeJson();
         }
         jsonReader = new PaperJsonReader(paperFile);
-        jsonReader.beginJson();
+        jsonReader.openJson();
         //TODO:quit the word query thread
         PaperViewerAdapter paperViewerAdapter = new PaperViewerAdapter(this, jsonReader, dictParser);
         wordView.setText(fileName);
         resultListView.setAdapter(paperViewerAdapter);
+        listAction = -1;
         Log.d(TAG, "Paper switch");
     }
+     */
+
+    public DictParser getDictParser() {
+        return dictParser;
+    }
+
+    /** ----------------------------Fragment manager---------------------------------------------*/
+
+    private void displayFragment(Fragment fragment) {
+        FragmentTransaction transaction= getFragmentManager().beginTransaction();
+        if (canDismiss) {
+            transaction.replace(R.id.main_content, fragment, TAG);
+        } else {
+            transaction.add(R.id.main_content, fragment, TAG);
+        }
+        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+        transaction.commit();
+        canDismiss = true;
+        resultListView.setVisibility(View.INVISIBLE);
+    }
+
+    private void dismissFragment() {
+        Fragment fragment = getFragmentManager().findFragmentByTag(TAG);
+        getFragmentManager().beginTransaction()
+                .remove(fragment)
+                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
+                .commit();
+        canDismiss = false;
+        resultListView.setVisibility(View.VISIBLE);
+    }
+
 
     /** -----------------------------------------------------------------------------------------*/
-
     /**
      * TODO: show my dictionary order by time will need to load the whole dictionary
      */
     private void showUserDict() {
         if (canDismiss) {
-            dismissDefinition(false);
+//            dismissDefinition(false);
+            dismissFragment();
         }
         UserAsyncWorkerHandler userHandler = UserAsyncWorkerHandler.getInstance(this, null);
         userHandler.setUserDictQueryListener(this);
         userDictAdapter = new UserDictAdapter(this, userHandler);
         wordView.setText(R.string.action_user_dict);
         resultListView.setAdapter(userDictAdapter);
+        listAction = -1;
     }
 
     private void clearUserDict() {
@@ -546,7 +637,7 @@ public class MainActivity extends AppCompatActivity
     public class QueryCallback implements QueryCompleteCallback {
         @Override
         public void onQueryComplete() {
-            updateDrawerAdapterData();
+            updateDictData();
             Log.d(TAG, "QueryCallback");
         }
     }

@@ -16,7 +16,7 @@ import android.widget.ArrayAdapter;
 
 import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.lib.ZBarActivity;
-import com.dict.hm.dictionary.paper.PaperViewerFragment;
+import com.dict.hm.dictionary.paper.PaperArchiveFragment;
 import com.dict.hm.dictionary.parse.PaperParser;
 
 import java.io.File;
@@ -30,7 +30,7 @@ public class PaperManagerActivity extends BaseManagerActivity {
     ArrayAdapter<String> adapter;
     String deleteItem;
     File paperDir;
-    PaperViewerFragment paperViewerFragment = null;
+    PaperArchiveFragment paperViewerFragment = null;
     String url = null;
     int type;
     boolean existed = false;
@@ -272,10 +272,10 @@ public class PaperManagerActivity extends BaseManagerActivity {
     private AdapterView.OnItemClickListener paperClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            paperViewerFragment = new PaperViewerFragment();
+            paperViewerFragment = new PaperArchiveFragment();
             String json = paperDir.getAbsolutePath() + File.separator + parent.getItemAtPosition(position);
             Bundle bundle = new Bundle();
-            bundle.putString(PaperViewerFragment.TAG, json);
+            bundle.putString(PaperArchiveFragment.TAG, json);
             paperViewerFragment.setArguments(bundle);
             showFragment(paperViewerFragment);
         }
