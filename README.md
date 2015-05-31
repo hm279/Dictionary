@@ -11,7 +11,7 @@
 
 ## 文章管理(Paper Manager)
 你可以添加 text，html 格式的文章，解析器会分析出单词，统计各个单词的出现次数，按次数排序存储。提供三种方法归档文章单词，归档即是把单词存放到你的单词库里。
-- 全部归档，把全部单词归档。 
+- 全部归档，把全部单词归档。
 - 过滤归档，把已存在词库里面的单词过滤掉，剩下生词。
 - 手动归档，手动选择归档单词。
 
@@ -30,3 +30,4 @@
 ![dict](screenshot/dict.png)
 ![paper](screenshot/paper.png)
 ![archive](screenshot/archive.png)
+
