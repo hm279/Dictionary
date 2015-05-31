@@ -60,6 +60,12 @@ public class PaperArchiveFragment extends ListFragment {
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+        actionBar.setHomeAsUpIndicator(null);
+    }
+
+    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.menu_archive, menu);
         menu.findItem(R.id.action_save).setVisible(false);

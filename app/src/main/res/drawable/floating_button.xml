@@ -119,7 +119,7 @@
 
     <item>
         <shape android:shape="oval">
-            <solid android:color="@color/accent_material_light"/>
+            <solid android:color="@color/material_accent_500"/>
         </shape>
     </item>
 </layer-list>

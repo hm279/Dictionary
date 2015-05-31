@@ -14,9 +14,9 @@ import java.util.ArrayList;
 /**
  * Created by hm on 15-3-15.
  */
-public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
-    private static final int version = 3;
-    private static final String databasename = "user.db";
+public class UserDictSQLiteHelper extends SQLiteOpenHelper {
+    private static final int VERSION = 3;
+    private static final String USER_DB = "user.db";
 
     /** ------------------------------------------------------------------------------------------*
      * A table that record the user's known words.
@@ -61,24 +61,24 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
     private static final String queryDictsSQL = "select rowid, * from " + DICT_TABLE;//+ " order by " + COLUMN_DICT_NAME;
 
     private SQLiteDatabase database = null;
-    private static UserDictSQLiteOpenHelper instance = null;
+    private static UserDictSQLiteHelper instance = null;
 
-    public static UserDictSQLiteOpenHelper getInstance(Context content) {
+    public static UserDictSQLiteHelper getInstance(Context content) {
         if (instance == null) {
-            instance = new UserDictSQLiteOpenHelper(content.getApplicationContext());
+            instance = new UserDictSQLiteHelper(content.getApplicationContext());
         }
         return instance;
     }
 
-    public UserDictSQLiteOpenHelper(Context context) {
-        super(context, databasename, null, version);
+    public UserDictSQLiteHelper(Context context) {
+        super(context, USER_DB, null, VERSION);
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(USER_TABLE_CREATE);
         db.execSQL(DICT_TABLE_CREATE);
-        Log.d(databasename, "onCreate");
+        Log.d(USER_DB, "onCreate");
     }
 
     /**
@@ -90,7 +90,7 @@ public class UserDictSQLiteOpenHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 //        db.execSQL("DROP TABLE IF EXISTS [" + USER_TABLE + "]");
 //        onCreate(db);
-        Log.d(databasename, "onUpgrade");
+        Log.d(USER_DB, "onUpgrade");
     }
 
     public long insertDictionary(DictFormat format) {

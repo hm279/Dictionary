@@ -17,14 +17,14 @@ import java.util.ArrayList;
  * Every normal table has a corresponding fts3 table.
  * Define the fts3 table name to "fts3- + 'normal table name'", like: table1 ---> fts3-table1
  */
-public class DictSQLiteOpenHelper extends SQLiteOpenHelper{
-    private static final String TAG = "DictSQLiteOpenHelper";
+public class DictSQLiteHelper extends SQLiteOpenHelper{
+    private static final String TAG = "DictSQLiteHelper";
     private SQLiteDatabase database = null;
     private String wordTableName;
     private String indexTableName;
-    private static DictSQLiteOpenHelper helper;
+    private static DictSQLiteHelper helper;
 
-    public static DictSQLiteOpenHelper getInstance(Context context) {
+    public static DictSQLiteHelper getInstance(Context context) {
         if (helper == null) {
             File externalDir = context.getExternalFilesDir(null);
             String databaseName;
@@ -33,12 +33,12 @@ public class DictSQLiteOpenHelper extends SQLiteOpenHelper{
             } else {
                 databaseName = DictSQLiteDefine.DATABASE_NAME;
             }
-            helper = new DictSQLiteOpenHelper(context.getApplicationContext(), databaseName);
+            helper = new DictSQLiteHelper(context.getApplicationContext(), databaseName);
         }
         return helper;
     }
 
-    public DictSQLiteOpenHelper(Context context, String mDatabaseName) {
+    public DictSQLiteHelper(Context context, String mDatabaseName) {
         super(context, mDatabaseName, null, DictSQLiteDefine.VERSION);
     }
 

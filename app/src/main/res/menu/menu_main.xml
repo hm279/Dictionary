@@ -3,39 +3,11 @@
     xmlns:appandroid="http://schemas.android.com/apk/res-auto"
     tools:context=".MainActivity">
 
-    <item
-        android:id="@+id/action_add_dict"
-        android:title="@string/action_dict"
-        android:orderInCategory="11"
-        appandroid:showAsAction="never"
-        />
-
-    <item
-        android:id="@+id/action_add_paper"
-        android:title="@string/action_paper"
-        android:orderInCategory="12"
-        appandroid:showAsAction="never"
-        />
-
-    <item android:id="@+id/action_my_dict"
-        android:title="@string/action_user_dict"
-        android:orderInCategory="13"
-        appandroid:showAsAction="never"
-        />
-
     <item android:id="@+id/action_clear_myDict"
         android:title="@string/action_clear_user_dict"
         android:orderInCategory="14"
         appandroid:showAsAction="never"
         />
-
-    <item
-        android:id="@+id/action_settings"
-        android:title="@string/action_settings"
-        android:orderInCategory="15"
-        appandroid:showAsAction="never"
-        />
-
     <item
         android:id="@+id/search"
         android:title="@string/action_search"

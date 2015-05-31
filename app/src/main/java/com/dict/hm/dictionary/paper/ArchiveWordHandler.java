@@ -6,7 +6,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 
-import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ public class ArchiveWordHandler extends Handler {
 
     private static Looper sLooper = null;
 
-    UserDictSQLiteOpenHelper helper;
+    UserDictSQLiteHelper helper;
     WorkerHandler handler;
     ArchiveWordListener listener;
 
@@ -59,7 +59,7 @@ public class ArchiveWordHandler extends Handler {
                 sLooper = thread.getLooper();
             }
         }
-        helper = UserDictSQLiteOpenHelper.getInstance(context);
+        helper = UserDictSQLiteHelper.getInstance(context);
         handler = new WorkerHandler(sLooper, this);
     }
 

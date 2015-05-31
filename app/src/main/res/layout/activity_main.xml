@@ -37,14 +37,14 @@
     </LinearLayout>
 
     <!--drawer navigation-->
-    <LinearLayout
+    <com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/left_drawerLayout"
         android:layout_width="304dp"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        android:background="#CFFFFFFF"
+        app:insetForeground="#4000"
         >
         <ListView
             android:id="@+id/drawer_listView"
@@ -54,6 +54,6 @@
             android:divider="@null"
             android:background="?attr/android:windowBackground"
             />
-    </LinearLayout>
+    </com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout>
 </android.support.v4.widget.DrawerLayout>
 

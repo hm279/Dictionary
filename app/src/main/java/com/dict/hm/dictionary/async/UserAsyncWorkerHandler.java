@@ -8,7 +8,7 @@ import android.os.Looper;
 import android.os.Message;
 
 import com.dict.hm.dictionary.dict.DictFormat;
-import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -29,7 +29,7 @@ public class UserAsyncWorkerHandler extends Handler {
     private Handler mWorkerThreadHandler;
 
     WeakReference<UserDictQueryListener> listenerWeakReference;
-    UserDictSQLiteOpenHelper helper;
+    UserDictSQLiteHelper helper;
 
     DictManagerCallback callback;
     static UserAsyncWorkerHandler handler = null;
@@ -111,7 +111,7 @@ public class UserAsyncWorkerHandler extends Handler {
             }
         }
         mWorkerThreadHandler = new WorkerHandler(sLooper);
-        helper = UserDictSQLiteOpenHelper.getInstance(context);
+        helper = UserDictSQLiteHelper.getInstance(context);
         this.callback = callback;
     }
 

@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.provider.BaseColumns;
+import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
@@ -21,14 +22,16 @@ import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,9 +41,9 @@ import com.dict.hm.dictionary.dict.DictContentProvider;
 import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.dict.DictSQLiteDefine;
-import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
+import com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout;
 import com.dict.hm.dictionary.paper.PaperJsonReader;
-import com.dict.hm.dictionary.paper.PaperViewerAdapter;
 import com.dict.hm.dictionary.paper.PaperViewerFragment;
 import com.dict.hm.dictionary.parse.DictParser;
 
@@ -59,7 +62,7 @@ public class MainActivity extends AppCompatActivity
 
     private Toolbar toolbar;
     private DrawerLayout drawerLayout;
-    private LinearLayout leftDrawerLayout;
+    private ScrimInsetsFrameLayout leftDrawerLayout;
     private ActionBarDrawerToggle drawerToggle;
     private NavigationDrawerAdapter adapter;
 
@@ -78,6 +81,8 @@ public class MainActivity extends AppCompatActivity
     private DictManager manager = null;
     private PaperJsonReader jsonReader = null;
     private UserDictAdapter userDictAdapter = null;
+
+    GestureDetectorCompat detector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +114,9 @@ public class MainActivity extends AppCompatActivity
             QueryCallback callback = new QueryCallback();
             manager.setOnQueryCompleteCallback(callback);
         }
+
+        detector = new GestureDetectorCompat(this, new MyGestureListener());
+
         /**
          * I don't clearly remember why this need to handleIntent()
          * maybe the notification need this.
@@ -165,6 +173,32 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        //TODO: gesture detection not work
+        detector.onTouchEvent(event);
+        return super.onTouchEvent(event);
+    }
+
+    class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            if (super.onFling(e1, e2, velocityX, velocityY)) {
+                return true;
+            }
+            searchItem.expandActionView();
+            searchView.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
+            return true;
+        }
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         Log.d(TAG, "onNewIntent");
         /**
@@ -218,20 +252,6 @@ public class MainActivity extends AppCompatActivity
             return true;
         }
         switch (id) {
-            case R.id.action_settings:
-                //for test
-//                NotificationDialog.newInstance("this is a test").show(getFragmentManager(), null);
-                copy();
-                return true;
-            case R.id.action_add_dict:
-                startManagerActivity(R.id.action_add_dict);
-                return true;
-            case R.id.action_add_paper:
-                startManagerActivity(R.id.action_add_paper);
-                return true;
-            case R.id.action_my_dict:
-                showUserDict();
-                return true;
             case R.id.action_clear_myDict:
                 clearUserDict();
                 return true;
@@ -258,7 +278,7 @@ public class MainActivity extends AppCompatActivity
 //        if (BuildConfig.DEBUG) {
 //            System.gc();
 //        }
-        if (id == R.id.action_add_dict) {
+        if (id == NavigationDrawerAdapter.MANAGE_DICT) {
             Intent intent = new Intent(this, DictManagerActivity.class);
             startActivityForResult(intent, 0);
         } else {
@@ -295,13 +315,13 @@ public class MainActivity extends AppCompatActivity
 
     private void initNavigationDrawer() {
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawerLayout.setStatusBarBackgroundColor(getResources().getColor(
-                R.color.material_teal_700));
+//        drawerLayout.setStatusBarBackgroundColor(getResources().getColor(
+//                R.color.material_teal_700));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().setStatusBarColor(0x0);
         }
 
-        leftDrawerLayout = (LinearLayout) findViewById(R.id.left_drawerLayout);
+        leftDrawerLayout = (ScrimInsetsFrameLayout) findViewById(R.id.left_drawerLayout);
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar,
                 R.string.drawer_open, R.string.drawer_close) {
             @Override
@@ -324,6 +344,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 drawerLayout.closeDrawer(leftDrawerLayout);
+                ((ListView) parent).setItemChecked(position, true);
                 if (canDismiss) {
 //                    dismissDefinition(false);
                     dismissFragment();
@@ -339,10 +360,10 @@ public class MainActivity extends AppCompatActivity
                         listPaper();
                         break;
                     case NavigationDrawerAdapter.MANAGE_DICT:
-                        startManagerActivity(R.id.action_add_dict);
+                        startManagerActivity(NavigationDrawerAdapter.MANAGE_DICT);
                         break;
                     case NavigationDrawerAdapter.MANAGE_PAPER:
-                        startManagerActivity(R.id.action_add_paper);
+                        startManagerActivity(NavigationDrawerAdapter.MANAGE_PAPER);
                         break;
                     case NavigationDrawerAdapter.SETTINGS:
                         break;
@@ -510,12 +531,6 @@ public class MainActivity extends AppCompatActivity
             bundle.putString(DefinitionFragment.WORD, word);
             bundle.putString(DefinitionFragment.DEF, definition);
             definitionFragment.setArguments(bundle);
-//            getFragmentManager().beginTransaction()
-//                    .add(R.id.main_content, definitionFragment)
-//                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-//                    .commit();
-//            canDismiss = true;
-//            resultListView.setVisibility(View.INVISIBLE);
             displayFragment(definitionFragment);
         }
         searchItem.collapseActionView();
@@ -523,12 +538,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void dismissDefinition(boolean focus) {
-//        getFragmentManager().beginTransaction()
-//                .remove(definitionFragment)
-//                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
-//                .commit();
-//        canDismiss = false;
-//        resultListView.setVisibility(View.VISIBLE);
         dismissFragment();
         definitionFragment = null;
         if (focus) {
@@ -623,7 +632,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void clearUserDict() {
-        UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(this);
+        UserDictSQLiteHelper helper = UserDictSQLiteHelper.getInstance(this);
         helper.clearUserWords();
         Toast.makeText(this, "Words Clear!", Toast.LENGTH_LONG).show();
     }
@@ -655,9 +664,9 @@ public class MainActivity extends AppCompatActivity
         if (cursor != null) {
             if (cursor.moveToFirst()) {
                 int idIndex = cursor.getColumnIndex("rowid");
-                int wordIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_WORD);
-                int countIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_COUNT);
-                int timeIndex = cursor.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_TIME);
+                int wordIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_WORD);
+                int countIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_COUNT);
+                int timeIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_TIME);
                 do {
                     words.add(cursor.getString(wordIndex));
                     counts.add(cursor.getLong(countIndex));
@@ -766,7 +775,7 @@ public class MainActivity extends AppCompatActivity
      * for test
      */
     private void copy() {
-        File src = getDatabasePath(UserDictSQLiteOpenHelper.getInstance(this).getDatabaseName());
+        File src = getDatabasePath(UserDictSQLiteHelper.getInstance(this).getDatabaseName());
         File dst = new File("/sdcard/test.db");
         FileInputStream in;
         FileOutputStream out;

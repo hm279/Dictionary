@@ -5,5 +5,9 @@
     <color name="material_teal_600">#00897b</color>
     <color name="material_teal_700">#00796b</color>
     <color name="material_teal_800">#00695c</color>
-    <color name="divider_color">#1F000000</color>
+    <color name="material_read_500">#F44336</color>
+    <color name="divider_color">#1E000000</color>
+    <color name="activated_color">#1E000000</color>
+
+    <color name="material_accent_500">#8BC34A</color>
 </resources>

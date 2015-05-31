@@ -12,14 +12,14 @@
         <item name="android:windowActionBar">false</item>
         <item name="windowActionBar">false</item>
 
-        <item name="colorPrimary">@color/accent_material_light</item>
+        <item name="colorPrimary">@color/material_deep_teal_500</item>
         <item name="colorPrimaryDark">@color/material_teal_700</item>
-        <item name="colorAccent">@color/accent_material_light</item>
+        <item name="colorAccent">@color/material_accent_500</item>
         <item name="android:windowBackground">@color/bright_foreground_material_dark</item>
         <item name="android:textColorPrimary">@color/primary_text_default_material_light</item>
         <item name="android:textColorSecondary">@color/primary_text_default_material_dark</item>
 
-        <item name="toolbarStyle">@style/MyToolbar</item>
+        <item name="toolbarStyle">@style/MyToolbarStyle</item>
         <item name="android:actionMenuTextColor">@color/primary_text_default_material_dark</item>
         <item name="actionMenuTextColor">@color/primary_text_default_material_dark</item>
         <!-- set the background color of the overflow menu item (including hard key menu in the bottom) -->
@@ -35,13 +35,14 @@
         <!--<item name="android:listViewStyle">@style/myListViewStyle.light</item>-->
     </style>
     
-    <style name="MyToolbar" parent="Widget.AppCompat.Toolbar">
-        <item name="titleTextAppearance">@style/MyTitleStyle</item>
+    <style name="MyToolbarStyle" parent="Widget.AppCompat.Toolbar">
+        <item name="titleTextAppearance">@style/MyToolbarTitleStyle</item>
     </style>
-    <style name="MyTitleStyle" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
+    <style name="MyToolbarTitleStyle" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
         <item name="android:textColor">@color/primary_text_default_material_dark</item>
     </style>
 
+    <!--
     <style name="myListViewStyle.light" parent="android:style/Widget.ListView">
         <item name="android:divider">@color/divider_color</item>
         <item name="android:dividerHeight">1dp</item>
@@ -49,7 +50,6 @@
         <item name="android:cacheColorHint">@android:color/transparent</item>
     </style>
 
-    <!--
     <style name="dropDownListViewStyle.light" parent="Widget.AppCompat.Light.ListView.DropDown">
         <item name="android:divider">@null</item>
         <item name="android:background">@android:color/white</item>

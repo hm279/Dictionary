@@ -5,7 +5,7 @@ import android.os.Message;
 
 import com.dict.hm.dictionary.BaseManagerActivity;
 import com.dict.hm.dictionary.DictManagerActivity;
-import com.dict.hm.dictionary.dict.DictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.DictSQLiteHelper;
 import com.dict.hm.dictionary.parse.IdxParser;
 
 import java.io.File;
@@ -19,9 +19,9 @@ public class LoadDictionary extends Thread{
     File idxFile;
     Handler handler;
     String bookName;
-    DictSQLiteOpenHelper helper;
+    DictSQLiteHelper helper;
 
-    public LoadDictionary(String bookName, File idxFile, DictSQLiteOpenHelper helper, Handler handler) {
+    public LoadDictionary(String bookName, File idxFile, DictSQLiteHelper helper, Handler handler) {
         super();
         this.idxFile = idxFile;
         this.handler = handler;

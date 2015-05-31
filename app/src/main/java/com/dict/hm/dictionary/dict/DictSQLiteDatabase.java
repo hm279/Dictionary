@@ -18,7 +18,7 @@ public class DictSQLiteDatabase {
     DictManager manager;
 
     public DictSQLiteDatabase(Context context) {
-        DictSQLiteOpenHelper helper = DictSQLiteOpenHelper.getInstance(context);
+        DictSQLiteHelper helper = DictSQLiteHelper.getInstance(context);
         database = helper.getReadableDatabase();
         manager  = DictManager.getInstance(context);
     }

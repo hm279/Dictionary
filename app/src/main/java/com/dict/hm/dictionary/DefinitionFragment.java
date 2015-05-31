@@ -11,9 +11,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.dict.hm.dictionary.dict.UserDictSQLiteOpenHelper;
+import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 import com.dict.hm.dictionary.paper.JsonEntry;
-import com.dict.hm.dictionary.paper.PaperJsonReader;
 
 import java.util.ArrayList;
 
@@ -31,7 +30,7 @@ public class DefinitionFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        view = inflater.inflate(R.layout.word_definition_item, container, false);
+        view = inflater.inflate(R.layout.definition_item, container, false);
         Bundle bundle = getArguments();
         final String word = bundle.getString(WORD);
         String definition = bundle.getString(DEF);
@@ -45,7 +44,7 @@ public class DefinitionFragment extends Fragment {
                 Drawable drawable = getResources().getDrawable(R.drawable.ic_favorite_black_48dp);
                 favorite.setImageDrawable(drawable);
                 //TODO: store the word to my dictionary.
-                UserDictSQLiteOpenHelper helper = UserDictSQLiteOpenHelper.getInstance(getActivity());
+                UserDictSQLiteHelper helper = UserDictSQLiteHelper.getInstance(getActivity());
                 ArrayList<JsonEntry> words = new ArrayList<>();
                 JsonEntry entry = new JsonEntry(word, 1);
                 words.add(entry);

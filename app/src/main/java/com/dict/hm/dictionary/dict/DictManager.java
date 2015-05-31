@@ -33,7 +33,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     private ArrayList<String> papers;
 
     Context context;
-    UserDictSQLiteOpenHelper helper;
+    UserDictSQLiteHelper helper;
     UserAsyncWorkerHandler queryHandler;
     WeakReference<MainActivity.QueryCallback> reference = null;
 
@@ -57,7 +57,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         }
         active = -1;
         queryHandler = UserAsyncWorkerHandler.getInstance(context, this);
-        helper = UserDictSQLiteOpenHelper.getInstance(context);
+        helper = UserDictSQLiteHelper.getInstance(context);
         queryHandler.startQuery();
         queryHandler.startList(paperDir);
     }
@@ -103,7 +103,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
                 new UnGzipThread(gzipDictFile, dictFile, mHandler).start();
             }
 
-            DictSQLiteOpenHelper helper = DictSQLiteOpenHelper.getInstance(context);
+            DictSQLiteHelper helper = DictSQLiteHelper.getInstance(context);
             if (!idxFile.exists() && gzipIdxFile.exists()) {
                 new LoadDictionary(format.getBookName(), idxFile, helper, mHandler).start();
             } else {
@@ -257,7 +257,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
 
         @Override
         public void run() {
-            DictSQLiteOpenHelper.getInstance(context).dropTable(book);
+            DictSQLiteHelper.getInstance(context).dropTable(book);
             Message message = handler.obtainMessage(BaseManagerActivity.DELETE);
             message.obj = book;
             handler.sendMessage(message);
@@ -289,11 +289,11 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         if (result != null) {
             if (result.moveToFirst()) {
                 int idIndex = result.getColumnIndex("rowid");
-                int nameIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_NAME);
-                int typeIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_TYPE);
-                int dataIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_DATA);
-                int onIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_DICT_ACTIVE);
-                int tableIndex = result.getColumnIndex(UserDictSQLiteOpenHelper.COLUMN_TABLE_NAME);
+                int nameIndex = result.getColumnIndex(UserDictSQLiteHelper.COLUMN_DICT_NAME);
+                int typeIndex = result.getColumnIndex(UserDictSQLiteHelper.COLUMN_DICT_TYPE);
+                int dataIndex = result.getColumnIndex(UserDictSQLiteHelper.COLUMN_DICT_DATA);
+                int onIndex = result.getColumnIndex(UserDictSQLiteHelper.COLUMN_DICT_ACTIVE);
+                int tableIndex = result.getColumnIndex(UserDictSQLiteHelper.COLUMN_TABLE_NAME);
                 formats = new ArrayList<>();
                 rowids = new ArrayList<>();
                 do {

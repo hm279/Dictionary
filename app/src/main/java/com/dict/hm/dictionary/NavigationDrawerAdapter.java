@@ -74,7 +74,7 @@ public class NavigationDrawerAdapter extends BaseAdapter{
             default:
                 string = "";
         }
-        TextView textView = (TextView) view.findViewById(R.id.drawer_text_test);
+        TextView textView = (TextView) view.findViewById(R.id.drawer_text);
         textView.setText(string);
 
         view.setBackground(null);
@@ -85,7 +85,7 @@ public class NavigationDrawerAdapter extends BaseAdapter{
                 view.setBackgroundResource(R.drawable.ic_wallpaper);
             } else if (position == 1 || position == 11){
                 view.getLayoutParams().height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                        8, resources.getDisplayMetrics());
+                        16, resources.getDisplayMetrics());
             } else {
                 view.getLayoutParams().height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                         16, resources.getDisplayMetrics());
@@ -135,6 +135,11 @@ public class NavigationDrawerAdapter extends BaseAdapter{
                 type = 0;
         }
         return type;
+    }
+
+    @Override
+    public boolean isEnabled(int position) {
+        return getItemViewType(position) > 0;
     }
 
     @Override
