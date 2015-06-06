@@ -1,9 +1,10 @@
-package com.dict.hm.dictionary.lib;
+package com.dict.hm.dictionary.async;
 
 import android.os.Handler;
 import android.util.Log;
 
-import com.dict.hm.dictionary.DictManagerActivity;
+import com.dict.hm.dictionary.lib.CustomGZIPInputStream;
+import com.dict.hm.dictionary.ui.DictManagerActivity;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

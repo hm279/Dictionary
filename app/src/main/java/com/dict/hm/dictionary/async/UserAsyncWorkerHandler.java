@@ -41,7 +41,9 @@ public class UserAsyncWorkerHandler extends Handler {
         Handler handler;
         Cursor result;
         DictFormat format;
-        Object object;
+        // for list paper dir
+        File dir;
+        ArrayList<String> files;
     }
 
     protected class WorkerHandler extends Handler {
@@ -74,16 +76,15 @@ public class UserAsyncWorkerHandler extends Handler {
                     args.result = helper.getWords(args.arg1, args.arg2);
                     break;
                 case EVENT_USER_LIST:
-                    File dir = (File) args.object;
-                    if (dir.isDirectory()) {
-                        String[] names = dir.list();
+                    if (args.dir.isDirectory()) {
+                        String[] names = args.dir.list();
                         ArrayList<String> list = new ArrayList<>(names.length);
-                        for (String name : dir.list()) {
+                        for (String name : args.dir.list()) {
                             list.add(name);
                         }
-                        args.object = list;
+                        args.files = list;
                     } else {
-                        args.object = null;
+                        args.files = null;
                     }
                     break;
                 default:
@@ -147,7 +148,7 @@ public class UserAsyncWorkerHandler extends Handler {
                 listener.onUserDictQueryComplete(args.result);
                 break;
             case EVENT_USER_LIST:
-                callback.onUserPaperListComplete((ArrayList<String>) args.object);
+                callback.onUserPaperListComplete(args.files);
                 break;
         }
     }
@@ -158,7 +159,7 @@ public class UserAsyncWorkerHandler extends Handler {
     public void startList(File paperDir) {
         WorkerArgs args = new WorkerArgs();
         args.handler = this;
-        args.object = paperDir;
+        args.dir = paperDir;
         Message message = mWorkerThreadHandler.obtainMessage(EVENT_USER_LIST);
         message.obj = args;
         message.sendToTarget();
@@ -228,6 +229,5 @@ public class UserAsyncWorkerHandler extends Handler {
         void onUserPaperListComplete(ArrayList<String> list);
     }
 
-    //TODO: maybe add a async worker to load paper
 
 }

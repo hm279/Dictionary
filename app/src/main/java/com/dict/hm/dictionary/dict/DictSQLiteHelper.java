@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import com.dict.hm.dictionary.parse.IdxParser;
+import com.dict.hm.dictionary.dict.parse.IdxParser;
 
 import java.io.File;
 import java.util.ArrayList;

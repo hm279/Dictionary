@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui.dialog;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -6,10 +6,14 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.dict.hm.dictionary.R;
 
 /**
  * Created by hm on 15-4-7.
@@ -17,7 +21,7 @@ import android.widget.TextView;
 public class NotificationDialog extends DialogFragment{
     private static String TXT = "text";
 
-    static NotificationDialog newInstance(String text) {
+    public static NotificationDialog newInstance(String text) {
         NotificationDialog dialogFragment = new NotificationDialog();
         Bundle bundle = new Bundle();
         bundle.putString(TXT, text);
@@ -35,23 +39,21 @@ public class NotificationDialog extends DialogFragment{
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 //        builder.setMessage(text);
-        TextView view =(TextView) getActivity().getLayoutInflater().inflate(R.layout.snackbar, null);
-        view.setText(text);
+        View view = getActivity().getLayoutInflater().inflate(R.layout.snackbar, null);
+        TextView textView =(TextView) view.findViewById(R.id.snackbar_text);
+        textView.setText(text);
         builder.setView(view);
-        return builder.create();
-    }
 
-    @Override
-    public void onStart() {
-        super.onStart();
+        Dialog dialog = builder.create();
         //set dialog's style
-        Window window = getDialog().getWindow();
+        Window window = dialog.getWindow();
+        window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         WindowManager.LayoutParams layoutParams = window.getAttributes();
-        layoutParams.gravity = Gravity.BOTTOM | Gravity.START;
+        layoutParams.gravity = Gravity.BOTTOM;
         layoutParams.dimAmount = 0.0f;
         layoutParams.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
         window.setAttributes(layoutParams);
-//        window.setLayout();
+        return dialog;
     }
 
     @Override

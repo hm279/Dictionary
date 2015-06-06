@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">词典</string>
-    <string name="action_clear_user_dict">清除用户词典</string>
+    <string name="action_clear_user_dict">清空用户词典</string>
     <string name="action_dict">词典</string>
     <string name="action_paper">文章</string>
     <string name="action_search">搜索</string>
@@ -22,4 +22,11 @@
     <string name="drawer_paper_manager">文章管理</string>
     <string name="drawer_personal_dict">个人词典</string>
     <string name="drawer_settings">设置</string>
+    <string name="about_title">关于</string>
+    <string name="about_message">感谢开源项目 Jsoup 和 ZBar。\n邮件支持： kenhm808@gmail.com</string>
+    <string name="action_clear_paper">清空用户文章</string>
+    <string name="settings_auto_filter">自动过滤</string>
+    <string name="settings_auto_filter_hint">新增文章时，自动过滤认识的单词</string>
+    <string name="settings_clear">清空</string>
+    <string name="settings_cancel">取消</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui.dialog;
 
 import android.app.Activity;
 import android.app.Dialog;

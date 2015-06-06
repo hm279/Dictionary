@@ -12,7 +12,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:configChanges="orientation|screenSize"
             android:launchMode="singleTop"
             android:label="@string/app_name" >
@@ -30,11 +30,11 @@
         </activity>
 
         <activity
-            android:name=".PaperManagerActivity"
+            android:name=".ui.PaperManagerActivity"
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize"/>
 
-        <activity android:name=".DictManagerActivity"
+        <activity android:name=".ui.DictManagerActivity"
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize" />
 

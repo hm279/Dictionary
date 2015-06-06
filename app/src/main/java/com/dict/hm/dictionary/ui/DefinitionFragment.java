@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
 import android.app.Fragment;
 import android.graphics.drawable.Drawable;
@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 import com.dict.hm.dictionary.paper.JsonEntry;
 

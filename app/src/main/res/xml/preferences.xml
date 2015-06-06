@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="@string/title_paper">
+        <CheckBoxPreference
+            android:key="@string/key_auto_filter"
+            android:title="@string/settings_auto_filter"
+            android:summary="@string/settings_auto_filter_hint"
+            android:defaultValue="false"
+            />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="">
+        <com.dict.hm.dictionary.ui.DialogExPreference
+            android:title="@string/action_clear_user_dict"
+            android:dialogMessage="@string/action_clear_user_dict"
+            android:positiveButtonText="@string/settings_clear"
+            android:negativeButtonText="@string/settings_cancel"/>
+
+        <com.dict.hm.dictionary.ui.DialogExPreference
+            android:title="@string/action_clear_paper"
+            android:dialogMessage="@string/action_clear_paper"
+            android:positiveButtonText="@string/settings_clear"
+            android:negativeButtonText="@string/settings_cancel"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>

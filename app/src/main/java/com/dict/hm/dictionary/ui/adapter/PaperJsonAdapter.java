@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary.paper;
+package com.dict.hm.dictionary.ui.adapter;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,6 +8,7 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.dict.hm.dictionary.R;
+import com.dict.hm.dictionary.paper.JsonEntry;
 
 import java.util.ArrayList;
 
@@ -18,10 +19,12 @@ import java.util.ArrayList;
 public class PaperJsonAdapter extends BaseAdapter{
     LayoutInflater inflater;
     ArrayList<JsonEntry> list;
+    ArrayList<JsonEntry> removedList;
 
     public PaperJsonAdapter(Context context, ArrayList<JsonEntry> list) {
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         this.list= list;
+        removedList = new ArrayList<>();
     }
 
     @Override
@@ -58,6 +61,32 @@ public class PaperJsonAdapter extends BaseAdapter{
         wordView.setText(entry.getWord());
         countView.setText(Long.toString(entry.getCount()));
         return view;
+    }
+
+    public void removeItem(int position) {
+        removedList.add(list.get(position));
+        list.remove(position);
+        notifyDataSetChanged();
+    }
+
+    public void setList(ArrayList<JsonEntry> list) {
+        if (list == null) {
+            return;
+        }
+        this.list = list;
+        notifyDataSetChanged();
+    }
+
+    public ArrayList<JsonEntry> getList() {
+        return list;
+    }
+
+    public ArrayList<JsonEntry> getRemovedList() {
+        return removedList;
+    }
+
+    public void clearRemovedList() {
+        removedList.clear();
     }
 
 }

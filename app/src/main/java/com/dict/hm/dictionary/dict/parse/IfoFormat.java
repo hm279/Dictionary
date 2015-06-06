@@ -1,8 +1,7 @@
-package com.dict.hm.dictionary.parse;
+package com.dict.hm.dictionary.dict.parse;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 

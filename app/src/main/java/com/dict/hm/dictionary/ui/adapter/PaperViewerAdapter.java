@@ -1,15 +1,11 @@
-package com.dict.hm.dictionary.paper;
+package com.dict.hm.dictionary.ui.adapter;
 
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.SystemClock;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
@@ -17,7 +13,9 @@ import com.dict.hm.dictionary.async.WordAsyncQueryHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
 import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.R;
-import com.dict.hm.dictionary.parse.DictParser;
+import com.dict.hm.dictionary.dict.parse.DictParser;
+import com.dict.hm.dictionary.paper.JsonEntry;
+import com.dict.hm.dictionary.paper.PaperJsonReader;
 
 import java.util.ArrayList;
 
@@ -26,12 +24,12 @@ import java.util.ArrayList;
  */
 public class PaperViewerAdapter extends BaseAdapter
         implements WordAsyncQueryHandler.AsyncQueryListener{
-//    private Context context;
     private LayoutInflater inflater;
     private WordAsyncQueryHandler queryWord;
     private DictParser parser;
     private PaperJsonReader reader;
     private ArrayList<String> definitions;
+    private ArrayList<JsonEntry> entries;
     private Uri uri;
 
     private static final String error = "can't find word in the dictionary";
@@ -42,14 +40,13 @@ public class PaperViewerAdapter extends BaseAdapter
     private static final int preloadSize = 5;
     private boolean hasNext = true;
 
-//    private int mark = 0;
 
     public PaperViewerAdapter(Context context, PaperJsonReader reader, DictParser parser) {
-//        this.context = context;
         this.parser = parser;
         this.reader = reader;
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         definitions = new ArrayList<>();
+        entries = new ArrayList<>();
         queryWord = new WordAsyncQueryHandler(context.getContentResolver(), this);
         uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + "word");
         /**
@@ -73,7 +70,7 @@ public class PaperViewerAdapter extends BaseAdapter
         } else {
             view = inflater.inflate(R.layout.paper_viewer_item, parent, false);
         }
-        String word_text = reader.loadJsonKeyValue(position).getWord();
+        String word_text = entries.get(position).getWord();
         String definition_text = definitions.get(position);
 
         TextView word_TextView = (TextView) view.findViewById(R.id.paper_word);
@@ -103,8 +100,8 @@ public class PaperViewerAdapter extends BaseAdapter
 
     @Override
     public Object getItem(int position) {
-        if (position < reader.size()) {
-            return reader.loadJsonKeyValue(position).getWord();
+        if (position < entries.size()) {
+            return entries.get(position).getWord();
         }
         return null;
     }
@@ -122,10 +119,11 @@ public class PaperViewerAdapter extends BaseAdapter
     private void preload() {
         int i = 0;
         while (i < preloadSize) {
-            JsonEntry entry = reader.loadJsonKeyValue(queryPosition);
+            JsonEntry entry = reader.getNextJsonEntry();
             if (entry != null) {
                 queryWord.startQuery(queryPosition, null, uri, null, null,
                         new String[]{entry.getWord()}, null);
+                entries.add(entry);
             } else {
                 hasNext = false;
                 break;
@@ -161,7 +159,6 @@ public class PaperViewerAdapter extends BaseAdapter
         if (token < preloadSize) {
             notifyDataSetChanged();
         }
-//        mark = token;
     }
 
     private String getDefinition(int offset, int size) {

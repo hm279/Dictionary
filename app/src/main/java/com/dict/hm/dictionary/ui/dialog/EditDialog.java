@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui.dialog;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
 import android.widget.EditText;
+
+import com.dict.hm.dictionary.R;
 
 /**
  * Created by hm on 14-12-21.
@@ -19,7 +21,7 @@ public class EditDialog extends DialogFragment {
     private static final String POSITIVE = "positive";
     EditDialogListener listener;
 
-    static EditDialog newInstance(String title, String hint) {
+    public static EditDialog newInstance(String title, String hint) {
         EditDialog dialogFragment = new EditDialog();
         Bundle bundle = new Bundle();
         bundle.putString(HINT, hint);
@@ -29,7 +31,7 @@ public class EditDialog extends DialogFragment {
         return dialogFragment;
     }
 
-    static EditDialog newInstance(String title, String editText, String positive) {
+    public static EditDialog newInstance(String title, String editText, String positive) {
         EditDialog dialogFragment = new EditDialog();
         Bundle bundle = new Bundle();
         bundle.putString(TEXT, editText);

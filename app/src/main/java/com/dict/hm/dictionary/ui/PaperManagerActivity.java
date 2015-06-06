@@ -1,23 +1,28 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
-import android.app.Activity;
 import android.app.Fragment;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
+import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.lib.ZBarActivity;
-import com.dict.hm.dictionary.paper.PaperArchiveFragment;
-import com.dict.hm.dictionary.parse.PaperParser;
+import com.dict.hm.dictionary.paper.JsonEntry;
+import com.dict.hm.dictionary.paper.PaperErrorCode;
+import com.dict.hm.dictionary.paper.PaperParser;
+import com.dict.hm.dictionary.paper.PaperWorkerHandler;
+import com.dict.hm.dictionary.ui.dialog.AlertDialogFragment;
+import com.dict.hm.dictionary.ui.dialog.EditDialog;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -26,23 +31,28 @@ import java.util.ArrayList;
  * Created by hm on 15-1-30.
  * manage paper
  */
-public class PaperManagerActivity extends BaseManagerActivity {
+public class PaperManagerActivity extends BaseManagerActivity
+        implements PaperWorkerHandler.PaperWorkerListener{
     ArrayAdapter<String> adapter;
-    String deleteItem;
     File paperDir;
-    PaperArchiveFragment paperViewerFragment = null;
+    File openingPaper;
+    PaperArchiveFragment paperArchiveFragment = null;
     String url = null;
     int type;
     boolean existed = false;
-    boolean overwrite = false;
+    boolean autoFilter = false;
+
     DictManager manager;
+    PaperWorkerHandler paperWorkerHandler = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        title = getString(R.string.title_paper);
+        fab.setVisibility(View.GONE);
+
+//        title = getString(R.string.title_paper);
         empty.setText("No Paper");
-        setTitle(title);
+//        setTitle(title);
         manager = DictManager.getInstance(this);
         paperDir = manager.getPaperDir();
 
@@ -50,6 +60,11 @@ public class PaperManagerActivity extends BaseManagerActivity {
         listView.setOnItemLongClickListener(paperLongClickListener);
         adapter = new ArrayAdapter<>(this, R.layout.textview_item, manager.getPapers());
         listView.setAdapter(adapter);
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        autoFilter = preferences.getBoolean(getString(R.string.key_auto_filter), false);
+
+        paperWorkerHandler = new PaperWorkerHandler(this, this);
     }
 
     @Override
@@ -61,12 +76,6 @@ public class PaperManagerActivity extends BaseManagerActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.action_clear:
-                AlertDialogFragment dialogFragment = AlertDialogFragment
-                        .newInstance(null, "Clear All Paper?", "Clear", "Cancel");
-                dialogFragment.show(getFragmentManager(), null);
-                action = CLEAR;
-                return true;
             case R.id.action_attachment:
                 fileListFragment = new FileListFragment();
                 showFragment(fileListFragment);
@@ -79,9 +88,6 @@ public class PaperManagerActivity extends BaseManagerActivity {
                 Intent intent = new Intent(this, ZBarActivity.class);
                 startActivityForResult(intent, 0);
                 return true;
-            case android.R.id.home:
-                dismissFragment();
-                return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -92,7 +98,7 @@ public class PaperManagerActivity extends BaseManagerActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK) {
+        if (resultCode == RESULT_OK) {
             ArrayList<String> list = data.getStringArrayListExtra(ZBarActivity.RESULT);
             if (list.size() == 1) {
                 EditDialog editDialog = EditDialog.newInstance("Scan result", list.get(0), "Add");
@@ -123,7 +129,8 @@ public class PaperManagerActivity extends BaseManagerActivity {
         }
         if (url != null) {
             Uri uri = Uri.parse(url.trim());
-            String name = uri.getLastPathSegment();
+//            String name = uri.getLastPathSegment();
+            String name = uri.getPath();
             if (name == null) {
                 return;
             }
@@ -177,26 +184,9 @@ public class PaperManagerActivity extends BaseManagerActivity {
                 }
                 Log.d("add paper", "start...");
                 break;
-            case CLEAR:
-                manager.clearPaper();
-                adapter.notifyDataSetChanged();
-//                if (paperDir.isDirectory()) {
-//                    for (File file : paperDir.listFiles()) {
-//                        if (file.isFile()) {
-//                            file.delete();
-//                        }
-//                    }
-//                }
-//                adapter.clear();
-                break;
             case DEL:
-                manager.removePaper(deleteItem);
+                manager.removePaper(openingPaper);
                 adapter.notifyDataSetChanged();
-//                File paperFile = new File(paperDir, deleteItem);
-//                if (paperFile.isFile()) {
-//                    paperFile.delete();
-//                }
-//                adapter.remove(deleteItem);
                 break;
         }
         action = -1;
@@ -206,7 +196,6 @@ public class PaperManagerActivity extends BaseManagerActivity {
     protected void showFragment(Fragment fragment) {
         super.showFragment(fragment);
         Menu menu = toolbar.getMenu();
-        menu.findItem(R.id.action_clear).setVisible(false);
         menu.findItem(R.id.action_attachment).setVisible(false);
         menu.findItem(R.id.action_add_url).setVisible(false);
         menu.findItem(R.id.action_scan_qrcode).setVisible(false);
@@ -218,44 +207,30 @@ public class PaperManagerActivity extends BaseManagerActivity {
             return false;
         }
         Menu menu = toolbar.getMenu();
-        menu.findItem(R.id.action_clear).setVisible(true);
         menu.findItem(R.id.action_attachment).setVisible(true);
         menu.findItem(R.id.action_add_url).setVisible(true);
         menu.findItem(R.id.action_scan_qrcode).setVisible(true);
         return true;
     }
 
-//    private ArrayList<String> getListViewData() {
-//        ArrayList<String> strings = new ArrayList<>();
-//        if (paperDir.exists()) {
-//            for (String name : paperDir.list()) {
-//                strings.add(name);
-//            }
-//        }
-//        return strings;
-//    }
-
-    public void deletePaper(File json) {
-        adapter.remove(json.getName());
-        json.delete();
-        dismissFragment();
-    }
     /**
      *
      * @param out
      * variable type, selectedFile or url, need be prepared
      */
     private void addPaper(File out) {
+        manager.addPaper(out);
+        adapter.notifyDataSetChanged();
+
         if (type == PaperParser.TXT) {
-            new PaperParser(selectedFile, out, "UTF-8", PaperParser.TXT, handler).start();
+            paperWorkerHandler.startParse(selectedFile, out, "UTF-8", type, autoFilter);
         } else if (type == PaperParser.HTML){
-            new PaperParser(selectedFile, out, "UTF-8", PaperParser.HTML, handler).start();
+            paperWorkerHandler.startParse(selectedFile, out, "UTF-8", type, autoFilter);
         } else if (type == PaperParser.URL) {
-            new PaperParser(url, out, handler).start();
+            paperWorkerHandler.startParse(url, out, type, autoFilter);
         } else {
             return;
         }
-        overwrite = out.exists();
         initProgressDialog("Parsing...", 0);
     }
 
@@ -269,15 +244,31 @@ public class PaperManagerActivity extends BaseManagerActivity {
         return -1;
     }
 
+    public PaperWorkerHandler getPaperWorkerHandler() {
+        return paperWorkerHandler;
+    }
+
     private AdapterView.OnItemClickListener paperClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            paperViewerFragment = new PaperArchiveFragment();
-            String json = paperDir.getAbsolutePath() + File.separator + parent.getItemAtPosition(position);
+            listView.setItemChecked(position, true);
+            String name = (String) parent.getItemAtPosition(position);
+            if (name == null) {
+                return;
+            }
+            openingPaper = new File(paperDir, name);
+            if (!openingPaper.isFile()) {
+                manager.removePaper(openingPaper);
+                adapter.notifyDataSetChanged();
+                Toast.makeText(getApplicationContext(), "paper not exist", Toast.LENGTH_SHORT).show();
+                return;
+            }
             Bundle bundle = new Bundle();
-            bundle.putString(PaperArchiveFragment.TAG, json);
-            paperViewerFragment.setArguments(bundle);
-            showFragment(paperViewerFragment);
+            bundle.putString(PaperArchiveFragment.JSON_PATH, openingPaper.getAbsolutePath());
+
+            paperArchiveFragment = new PaperArchiveFragment();
+            paperArchiveFragment.setArguments(bundle);
+            showFragment(paperArchiveFragment);
         }
     };
 
@@ -287,39 +278,63 @@ public class PaperManagerActivity extends BaseManagerActivity {
             AlertDialogFragment dialogFragment = AlertDialogFragment
                     .newInstance(null, "Remove Paper?", "Remove", "Cancel");
             dialogFragment.show(getFragmentManager(), null);
-            deleteItem = (String) parent.getItemAtPosition(position);
+            String name = (String) parent.getItemAtPosition(position);
+            if (name == null) {
+                return true;
+            }
+            openingPaper = new File(paperDir, name);
             action = DEL;
             return true;
         }
     };
 
-    Handler handler = new Handler(new Handler.Callback() {
-        @Override
-        public boolean handleMessage(Message msg) {
-            switch (msg.what) {
-                case ERR:    // something wrong happened
-                    dismissProgressDialog();
-                    setNotification("failed to get html");
-                    return true;
-                case DELETE: //delete paper
-                    setNotification(msg.obj + " has been removed");
-//                    adapter.remove((String) msg.obj);
-                    return true;
-                case OK: // done parsing paper
-                    dismissProgressDialog();
-                    setNotification(msg.obj + " has been added");
+    @Override
+    public void onArchiveComplete(int type, int count, ArrayList<JsonEntry> arrayList) {
+        setNotification("Archive " + count + " words");
+        dismissProgressDialog();
+        switch (type) {
+            case PaperWorkerHandler.ALL:
+                dismissFragment();
+                manager.removePaper(openingPaper);
+                adapter.notifyDataSetChanged();
+                Log.d("all", "remove");
+                break;
+            case PaperWorkerHandler.FILTER:
+                paperArchiveFragment.onFilterComplete(arrayList);
+                break;
+        }
+    }
 
-                    if (!overwrite) {
-                        manager.addPaper((String) msg.obj);
-                        adapter.notifyDataSetChanged();
-                    }
-//                    adapter.remove((String) msg.obj);
-//                    adapter.add((String) msg.obj);
-                    return true;
-                default:
-                    return false;
+    @Override
+    public void onJsonReadComplete(ArrayList<JsonEntry> arrayList) {
+        paperArchiveFragment.setAdapter(arrayList);
+    }
+
+    @Override
+    public void onJsonWriteComplete(ArrayList<JsonEntry> arrayList) {
+        if (arrayList == null) {
+            //means json write failed
+            Toast.makeText(getApplicationContext(), "failed to update paper", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onPaperParseComplete(File json, int error) {
+        dismissProgressDialog();
+        if (error == 0) {
+            setNotification(json.getName() + " has been added");
+        } else {
+            //failed to parse. if json file exist, means it existed before parse.
+            if (!json.exists()) {
+                manager.removePaper(json);
+                adapter.notifyDataSetChanged();
+            }
+            if (error == PaperErrorCode.ERR_NET) {
+                setNotification("Network error");
+            } else {
+                setNotification("failed to parse");
             }
         }
-    });
+    }
 
 }

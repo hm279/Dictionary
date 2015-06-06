@@ -1,6 +1,5 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -13,18 +12,20 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
+import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.DictManager;
-import com.dict.hm.dictionary.lib.HttpDownload;
+import com.dict.hm.dictionary.async.HttpDownload;
 import com.dict.hm.dictionary.lib.ZBarActivity;
-import com.dict.hm.dictionary.parse.IfoFormat;
+import com.dict.hm.dictionary.dict.parse.IfoFormat;
+import com.dict.hm.dictionary.ui.dialog.AlertDialogFragment;
+import com.dict.hm.dictionary.ui.dialog.EditDialog;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -33,6 +34,11 @@ import java.util.ArrayList;
  * Created by hm on 15-3-18.
  */
 public class DictManagerActivity extends BaseManagerActivity {
+
+    public static final int ERR = -1;
+    public static final int OK = 0;
+    public static final int PROCESSING = 1;
+    public static final int DELETE = 2;
 
     public static final int DECOMPRESS = 10;
     public static final int DECOMPRESS_ERR = -10;
@@ -47,46 +53,16 @@ public class DictManagerActivity extends BaseManagerActivity {
         super.onCreate(savedInstanceState);
 
         //manage dictionary
-        title = getString(R.string.title_dict);
+//        title = getString(R.string.title_dict);
         empty.setText("No Dictionary");
-        setTitle(title);
+//        setTitle(title);
         listView.setOnItemClickListener(dictClickListener);
         fab.setVisibility(View.VISIBLE);
         fab.setOnClickListener(fabClickListener);
 
         manager = DictManager.getInstance(this);
-//        ArrayList<DictFormat> data = new ArrayList<>();
-//        data.addAll(manager.getDictFormats());
         adapter = new ArrayAdapter<>(this, R.layout.textview_item, manager.getDictFormats());
         listView.setAdapter(adapter);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        /**
-         * Don't tell me I am stupid.
-         * I am not. Don't ask me why.
-         * Looks like this will cause the gc. Call System.gc() not work.
-         */
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
-            drawableToBitmap(fab.getBackground());
-        }
-    }
-
-    public Bitmap drawableToBitmap (Drawable drawable) {
-        if (drawable instanceof BitmapDrawable) {
-            return ((BitmapDrawable)drawable).getBitmap();
-        }
-
-        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
-                drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-        drawable.draw(canvas);
-
-        return bitmap;
     }
 
 //    @Override
@@ -97,14 +73,11 @@ public class DictManagerActivity extends BaseManagerActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            dismissFragment();
-            return true;
-        } else if (item.getItemId() == R.id.action_add_url_dict) {
+        if (item.getItemId() == R.id.action_add_url) {
             EditDialog editDialog = EditDialog.newInstance("Input Url", "http://");
             editDialog.show(getFragmentManager(), null);
             return true;
-        } else if (item.getItemId() == R.id.action_scan_dict) {
+        } else if (item.getItemId() == R.id.action_scan_qrcode) {
             Intent intent = new Intent(this, ZBarActivity.class);
             startActivityForResult(intent, 0);
             return true;
@@ -115,7 +88,7 @@ public class DictManagerActivity extends BaseManagerActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK) {
+        if (resultCode == RESULT_OK) {
             ArrayList<String> list = data.getStringArrayListExtra(ZBarActivity.RESULT);
             if (list.size() == 1) {
                 onEditDialogPositiveClick(list.get(0));
@@ -128,6 +101,13 @@ public class DictManagerActivity extends BaseManagerActivity {
     }
 
     @Override
+    public void onEditDialogPositiveClick(String url) {
+        String filePath = Environment.getExternalStorageDirectory().getPath();
+        Uri uri = Uri.parse(url);
+        new HttpDownload(this).execute(url, filePath + "/" + uri.getLastPathSegment());
+    }
+
+    @Override
     public void onDialogPositiveClick() {
         switch (action) {
             case ADD:
@@ -135,18 +115,12 @@ public class DictManagerActivity extends BaseManagerActivity {
                     DictFormat format = manager.addDictionary(selectedFile, handler);
                     if (format != null) {
                         dismissFragment();
-//                        adapter.add(format);
                         initProgressDialog("Loading...", wordCount);
                     }
                 }
                 break;
-//            case CLEAR:
-//                manager.clearAllDictionaries();
-//                adapter.clear();
-//                break;
             case DEL:
                 manager.removeDictionary(deleteItemPosition, handler);
-//                adapter.remove(adapter.getItem(deleteItemPosition));
                 break;
         }
         action = -1;
@@ -170,13 +144,6 @@ public class DictManagerActivity extends BaseManagerActivity {
         } else {
             Toast.makeText(this, "please select .ifo file", Toast.LENGTH_LONG).show();
         }
-    }
-
-    @Override
-    public void onEditDialogPositiveClick(String url) {
-        String filePath = Environment.getExternalStorageDirectory().getPath();
-        Uri uri = Uri.parse(url);
-        new HttpDownload(this).execute(url, filePath + "/" + uri.getLastPathSegment());
     }
 
     @Override

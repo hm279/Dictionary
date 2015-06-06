@@ -1,9 +1,9 @@
-package com.dict.hm.dictionary.lib;
+package com.dict.hm.dictionary.async;
 
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.dict.hm.dictionary.BaseManagerActivity;
+import com.dict.hm.dictionary.ui.BaseManagerActivity;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

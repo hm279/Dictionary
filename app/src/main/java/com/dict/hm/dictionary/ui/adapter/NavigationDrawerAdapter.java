@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui.adapter;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -9,6 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+
+import com.dict.hm.dictionary.R;
 
 /**
  * Created by hm on 15-5-28.

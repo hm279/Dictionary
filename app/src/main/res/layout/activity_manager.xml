@@ -3,6 +3,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/manager_root">
 
     <android.support.v7.widget.Toolbar
@@ -30,10 +31,12 @@
             android:id="@+id/manager_listView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="end|bottom" />
+            android:layout_gravity="end|bottom"
+            android:choiceMode="singleChoice"
+            />
     </FrameLayout>
 
-    <ImageView
+<!--    <ImageView
         android:visibility="gone"
         android:id="@+id/manager_fab"
         android:layout_width="68dp"
@@ -42,6 +45,23 @@
         android:scaleType="center"
         android:tint="@android:color/white"
         android:background="@drawable/floating_button"
+
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="24dp"
+
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="24dp"
+        android:layout_marginEnd="24dp"
+        />
+        -->
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/manager_fab"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        app:fabSize="normal"
+        android:src="@drawable/ic_add_black_24dp"
+        android:tint="@android:color/white"
 
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="24dp"

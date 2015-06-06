@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
 import android.app.Fragment;
 import android.app.FragmentTransaction;
@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
+import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.MenuItemCompat;
@@ -36,6 +37,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dict.hm.dictionary.BuildConfig;
+import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
 import com.dict.hm.dictionary.dict.DictFormat;
@@ -44,8 +47,11 @@ import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 import com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout;
 import com.dict.hm.dictionary.paper.PaperJsonReader;
-import com.dict.hm.dictionary.paper.PaperViewerFragment;
-import com.dict.hm.dictionary.parse.DictParser;
+import com.dict.hm.dictionary.dict.parse.DictParser;
+import com.dict.hm.dictionary.ui.adapter.NavigationDrawerAdapter;
+import com.dict.hm.dictionary.ui.adapter.UserDictAdapter;
+import com.dict.hm.dictionary.ui.dialog.AboutDialog;
+import com.dict.hm.dictionary.ui.dialog.SwitchDictDialog;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -116,6 +122,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         detector = new GestureDetectorCompat(this, new MyGestureListener());
+
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
         /**
          * I don't clearly remember why this need to handleIntent()
@@ -252,9 +260,6 @@ public class MainActivity extends AppCompatActivity
             return true;
         }
         switch (id) {
-            case R.id.action_clear_myDict:
-                clearUserDict();
-                return true;
             case R.id.search:
 //                onSearchRequested();
                 return true;
@@ -366,8 +371,12 @@ public class MainActivity extends AppCompatActivity
                         startManagerActivity(NavigationDrawerAdapter.MANAGE_PAPER);
                         break;
                     case NavigationDrawerAdapter.SETTINGS:
+                        SettingsFragment fragment = new SettingsFragment();
+                        displayFragment(fragment);
                         break;
                     case NavigationDrawerAdapter.ABOUT:
+                        AboutDialog dialog = new AboutDialog();
+                        dialog.show(getFragmentManager(), null);
                         break;
                 }
             }
@@ -425,12 +434,21 @@ public class MainActivity extends AppCompatActivity
     AdapterView.OnItemClickListener resultListViewListener = new AdapterView.OnItemClickListener(){
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            //position 0 is the headView.
             if (listAction == action_query_word) {
-                Item item = (Item) parent.getAdapter().getItem(position);
-                Cursor cursor = getWordIndex(item.id);
-                parseDefinition(item.text, cursor);
+                //the two method is right, will get the right item.
+//                Object object = parent.getAdapter().getItem(position);
+                Object object = parent.getItemAtPosition(position);
+                if (object instanceof Item) {
+                    Item item = (Item) object;
+                    Cursor cursor = getWordIndex(item.id);
+                    parseDefinition(item.text, cursor);
+                }
             } else if (listAction == action_show_paper){
-                showPaper((String) parent.getAdapter().getItem(position));
+                Object object = parent.getItemAtPosition(position);
+                if (object instanceof String) {
+                    showPaper((String) object);
+                }
             }
         }
     };
@@ -561,7 +579,7 @@ public class MainActivity extends AppCompatActivity
 
     private void showPaper(String fileName) {
         Bundle bundle = new Bundle();
-        bundle.putString(PaperViewerFragment.PAPERNAME, fileName);
+        bundle.putString(PaperViewerFragment.PAPER_NAME, fileName);
         PaperViewerFragment fragment = new PaperViewerFragment();
         fragment.setArguments(bundle);
         displayFragment(fragment);
@@ -629,12 +647,6 @@ public class MainActivity extends AppCompatActivity
         wordView.setText(R.string.action_user_dict);
         resultListView.setAdapter(userDictAdapter);
         listAction = -1;
-    }
-
-    private void clearUserDict() {
-        UserDictSQLiteHelper helper = UserDictSQLiteHelper.getInstance(this);
-        helper.clearUserWords();
-        Toast.makeText(this, "Words Clear!", Toast.LENGTH_LONG).show();
     }
 
     /** -------------------define a callback for DictManager to update DrawerAdapter-------------*/

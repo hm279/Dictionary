@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary.parse;
+package com.dict.hm.dictionary.dict.parse;
 
 import android.util.Log;
 

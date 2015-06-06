@@ -4,14 +4,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.widget.Toast;
 
-import com.dict.hm.dictionary.BaseManagerActivity;
-import com.dict.hm.dictionary.MainActivity;
+import com.dict.hm.dictionary.ui.DictManagerActivity;
+import com.dict.hm.dictionary.ui.MainActivity;
 import com.dict.hm.dictionary.async.LoadDictionary;
 import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
-import com.dict.hm.dictionary.lib.UnGzipThread;
-import com.dict.hm.dictionary.parse.IfoFormat;
+import com.dict.hm.dictionary.async.UnGzipThread;
+import com.dict.hm.dictionary.dict.parse.IfoFormat;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -41,13 +42,13 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
 
     public static DictManager getInstance(Context context) {
         if (manager == null) {
-            manager = new DictManager(context);
+            manager = new DictManager(context.getApplicationContext());
         }
         return manager;
     }
 
     public DictManager(Context context) {
-        this.context = context.getApplicationContext();
+        this.context = context;
         rowid = new ArrayList<>();
         dictFormats = new ArrayList<>();
         papers = new ArrayList<>();
@@ -215,20 +216,25 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         }
     }
 
-    public void addPaper(String name) {
-        File paper = new File(paperDir, name);
-        if (paper.isFile()) {
-            papers.add(name);
+    public void addPaper(File paper) {
+        if (paper == null) {
+            return;
+        }
+        //while the paper exist, do not add.
+        if (!paper.isFile()) {
+            papers.add(paper.getName());
         }
     }
 
-    public void removePaper(String name) {
-        File paper = new File(paperDir, name);
+    public void removePaper(File paper) {
+        if (paper == null) {
+            return;
+        }
         if (paper.exists()) {
             paper.delete();
         }
         //file name is only.
-        papers.remove(name);
+        papers.remove(paper.getName());
     }
 
     public void clearPaper() {
@@ -246,6 +252,12 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         return paperDir;
     }
 
+    public void clearUserDict() {
+        UserDictSQLiteHelper helper = UserDictSQLiteHelper.getInstance(context);
+        helper.clearUserWords();
+        Toast.makeText(context, "Words Clear!", Toast.LENGTH_LONG).show();
+    }
+
     public class DropTableThread extends Thread {
         String book;
         Handler handler;
@@ -258,7 +270,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         @Override
         public void run() {
             DictSQLiteHelper.getInstance(context).dropTable(book);
-            Message message = handler.obtainMessage(BaseManagerActivity.DELETE);
+            Message message = handler.obtainMessage(DictManagerActivity.DELETE);
             message.obj = book;
             handler.sendMessage(message);
         }

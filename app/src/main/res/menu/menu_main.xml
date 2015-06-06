@@ -3,11 +3,6 @@
     xmlns:appandroid="http://schemas.android.com/apk/res-auto"
     tools:context=".MainActivity">
 
-    <item android:id="@+id/action_clear_myDict"
-        android:title="@string/action_clear_user_dict"
-        android:orderInCategory="14"
-        appandroid:showAsAction="never"
-        />
     <item
         android:id="@+id/search"
         android:title="@string/action_search"

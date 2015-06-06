@@ -15,29 +15,15 @@ import java.util.ArrayList;
  * Created by hm on 15-3-25.
  */
 public class PaperJsonReader {
-    File json;
     JsonReader reader;
-    ArrayList<JsonEntry> list;
-    ArrayList<JsonEntry> removedList;
-    private boolean needWrite = false;
 
     public PaperJsonReader(File json) {
-        this.json = json;
         try {
             reader = new JsonReader(new FileReader(json));
         } catch (FileNotFoundException e) {
             reader = null;
             e.printStackTrace();
         }
-        list = new ArrayList<>();
-        removedList = new ArrayList<>();
-    }
-
-    public JsonEntry getJsonKeyValue(int position) {
-        if (list.size() > position) {
-            return list.get(position);
-        }
-        return null;
     }
 
     public void openJson() {
@@ -48,16 +34,12 @@ public class PaperJsonReader {
         }
     }
 
-    public JsonEntry loadJsonKeyValue(int position) {
-        if (list.size() > position) {
-            return list.get(position);
-        }
+    public JsonEntry getNextJsonEntry() {
         JsonEntry entry = null;
         if (reader != null) {
             try {
                 if (reader.hasNext()) {
                     entry = new JsonEntry(reader.nextName(), reader.nextInt());
-                    list.add(entry);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -81,6 +63,7 @@ public class PaperJsonReader {
      * mark down and test it if needed.
      */
     public ArrayList<JsonEntry> readAll() {
+        ArrayList<JsonEntry> list = new ArrayList<>();
         if (reader != null) {
             try {
                 reader.beginObject();
@@ -101,65 +84,6 @@ public class PaperJsonReader {
             }
         }
         return list;
-    }
-
-    public int size() {
-        return list.size();
-    }
-
-    public void remove(int position) {
-        removedList.add(list.get(position));
-        list.remove(position);
-    }
-
-    public ArrayList<JsonEntry> getRemovedList() {
-        return removedList;
-    }
-
-    public void clearRemovedList() {
-        //manually
-        if (removedList.size() > 0) {
-            removedList.clear();
-            needWrite = true;
-        }
-    }
-
-    public void setList(ArrayList<JsonEntry> left) {
-        //filter
-        if (left.size() < list.size()) {
-            list.clear();
-            list.addAll(left);
-            needWrite = true;
-        }
-    }
-
-    public void updateJsonFile() {
-        //TODO: should auto delete the empty json file? if so, how user know that.
-//        if (needWrite && (list.size() > 0)) {
-        if (needWrite) {
-            JsonWriter jsonWriter = null;
-            try {
-                jsonWriter = new JsonWriter(new FileWriter(json));
-                jsonWriter.beginObject();
-                for (JsonEntry entry : list) {
-                    jsonWriter.name(entry.word);
-                    jsonWriter.value(entry.count);
-                }
-                jsonWriter.endObject();
-                jsonWriter.flush();
-                needWrite = false;
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (jsonWriter != null) {
-                        jsonWriter.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
     }
 
 }

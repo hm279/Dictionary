@@ -1,13 +1,6 @@
-package com.dict.hm.dictionary.parse;
+package com.dict.hm.dictionary.paper;
 
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.util.JsonWriter;
 import android.util.Log;
-
-import com.dict.hm.dictionary.BaseManagerActivity;
-
 import org.jsoup.Jsoup;
 import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Document;
@@ -15,58 +8,50 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.NodeTraversor;
 import org.jsoup.select.NodeVisitor;
-
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
-import java.util.TreeMap;
 
 /**
  * Created by hm on 15-3-3.
  */
-public class PaperParser extends Thread{
+public class PaperParser{
     public static final int TXT = 0;
     public static final int HTML = 1;
     public static final int URL = 2;
-    public static final String INFO = "info";
+
     HashMap<String, Integer> hashMap;
     File in;
-    File out;
     String url;
     String charset;
-    Handler handler;
     int type;
+    int error;
 
-    public PaperParser(File in, File out, String charset, int type, Handler handler) {
+    public PaperParser(File in, String charset, int type) {
         this.in = in;
-        this.out = out;
         this.charset = charset;
         this.type = type;
-        this.handler = handler;
     }
 
-    public PaperParser(String url, File out, Handler handler) {
+    public PaperParser(String url) {
         if (url.startsWith("http://") || url.startsWith("https://")) {
             this.url = url;
         } else {
             this.url = "http://" + url;
         }
-        this.out = out;
         this.type = URL;
-        this.handler = handler;
     }
 
-    @Override
-    public void run() {
+    public ArrayList<JsonEntry> parse() {
         hashMap = new HashMap<>();
         boolean success = false;
-        String text = null;
+        String text;
         switch (type) {
             case TXT:
                 success = parseText(in, charset);
@@ -85,25 +70,14 @@ public class PaperParser extends Thread{
                 break;
         }
 
-        if (success && out != null) {
-            TreeMap<String, Integer> sortedMap = sort(hashMap);
-            storePaper(sortedMap);
-            sendMessage(text, BaseManagerActivity.OK);
-        } else {
-            sendMessage(null, BaseManagerActivity.ERR);
+        if (success) {
+            return sort(hashMap);
         }
+        return null;
     }
 
-    private void sendMessage(String text, int code) {
-        Message message = handler.obtainMessage(code);
-        message.obj = out.getName();
-        message.arg1 = HTML;
-        if (text != null) {
-            Bundle bundle = new Bundle();
-            bundle.putString(INFO, text);
-            message.setData(bundle);
-        }
-        handler.sendMessage(message);
+    public int getError() {
+        return error;
     }
 
     private boolean parseText(File txt, String charset) {
@@ -167,62 +141,30 @@ public class PaperParser extends Thread{
             nodeTraversor.traverse(doc);
             text = formattingVisitor.toString();
         } catch (IOException e) {
+            error = PaperErrorCode.ERR_NET;
             e.printStackTrace();
             text = null;
         }
         return text;
     }
 
-    private void storePaper(TreeMap<String, Integer> sortedMap) {
-        if (out == null || out.isDirectory()) {
-            return;
+    private ArrayList<JsonEntry> sort(HashMap<String, Integer> hashMap) {
+        ArrayList<JsonEntry> arrayList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : hashMap.entrySet()) {
+            arrayList.add(new JsonEntry(entry.getKey(), entry.getValue()));
         }
-        JsonWriter jsonWriter = null;
-        try {
-            out.createNewFile();
-            jsonWriter = new JsonWriter(new FileWriter(out));
-            jsonWriter.beginObject();
-            for (TreeMap.Entry<String, Integer> entry : sortedMap.entrySet()) {
-                jsonWriter.name(entry.getKey())
-                        .value(entry.getValue());
-            }
-            jsonWriter.endObject();
-            jsonWriter.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (jsonWriter != null) {
-                    jsonWriter.close();
+        Collections.sort(arrayList, new Comparator<JsonEntry>() {
+            @Override
+            public int compare(JsonEntry lhs, JsonEntry rhs) {
+                if (lhs.getCount() > rhs.getCount()) {
+                    return -1;
+                } else if (lhs.getCount() < rhs.getCount()) {
+                    return 1;
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                return 0;
             }
-        }
-    }
-
-    private TreeMap<String, Integer> sort(HashMap<String, Integer> hashMap) {
-        TreeMap<String, Integer> treeMap;
-        treeMap = new TreeMap<>(new ValueComparator(hashMap));
-        treeMap.putAll(hashMap);
-        return treeMap;
-    }
-
-    private class ValueComparator implements Comparator<String> {
-        HashMap<String, Integer> hashMap;
-
-        private ValueComparator(HashMap<String, Integer> hashMap) {
-            this.hashMap = hashMap;
-        }
-
-        @Override
-        public int compare(String lhs, String rhs) {
-            if (hashMap.get(lhs) >= hashMap.get(rhs)) {
-                return -1;
-            }
-            return 1;
-            //return 0 would merge keys
-        }
+        });
+        return arrayList;
     }
 
     private class FormattingVisitor implements NodeVisitor {

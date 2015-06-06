@@ -44,7 +44,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        app:insetForeground="#4000"
+        app:mInsetForeground="#4000"
         >
         <ListView
             android:id="@+id/drawer_listView"

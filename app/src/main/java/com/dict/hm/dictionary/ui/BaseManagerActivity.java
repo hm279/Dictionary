@@ -1,17 +1,26 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.TypedValue;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import com.dict.hm.dictionary.R;
+import com.dict.hm.dictionary.ui.dialog.AlertDialogFragment;
+import com.dict.hm.dictionary.ui.dialog.EditDialog;
+import com.dict.hm.dictionary.ui.dialog.NotificationDialog;
+import com.dict.hm.dictionary.ui.dialog.ProgressDialog;
+
 import java.io.File;
 
 /**
@@ -22,26 +31,20 @@ public abstract class BaseManagerActivity extends AppCompatActivity
         AlertDialogFragment.ConfirmDialogListener,
         EditDialog.EditDialogListener {
 
-    public static final int ERR = -1;
-    public static final int OK = 0;
-    public static final int PROCESSING = 1;
-    public static final int DELETE = 2;
-
     public static final String FRAGMENT_TAG = "top";
+    ActionBar actionBar;
     Toolbar toolbar;
     ListView listView;
     TextView empty;
-    ImageView fab;
+    FloatingActionButton fab;
     FileListFragment fileListFragment;
 
-//    ArrayAdapter<String> adapter;
     File selectedFile;
-    String title;
+    String title = null;
 
     int action = -1;
     static final int ADD = 0;
     static final int DEL = 1;
-    static final int CLEAR = 2;
 
     String notification = null;
     boolean isStop;
@@ -54,9 +57,29 @@ public abstract class BaseManagerActivity extends AppCompatActivity
         toolbar = (Toolbar) findViewById(R.id.manager_toolbar);
         listView = (ListView) findViewById(R.id.manager_listView);
         empty = (TextView) findViewById(R.id.emptyView);
-        fab = (ImageView) findViewById(R.id.manager_fab);
+        fab = (FloatingActionButton) findViewById(R.id.manager_fab);
         setSupportActionBar(toolbar);
         listView.setEmptyView(empty);
+
+        actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setTitle(null);
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                if (!dismissFragment()) {
+                    finish();
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
@@ -97,11 +120,10 @@ public abstract class BaseManagerActivity extends AppCompatActivity
                 .commit();
         listView.setVisibility(View.INVISIBLE);
         empty.setVisibility(View.INVISIBLE);
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            getSupportActionBar().setHomeButtonEnabled(true);
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
+//        if (actionBar != null) {
+//            actionBar.setHomeButtonEnabled(true);
+//            actionBar.setDisplayHomeAsUpEnabled(true);
+//        }
     }
 
     protected boolean dismissFragment() {
@@ -117,12 +139,11 @@ public abstract class BaseManagerActivity extends AppCompatActivity
         if (listView.getAdapter().isEmpty()) {
             empty.setVisibility(View.VISIBLE);
         }
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            getSupportActionBar().setHomeButtonEnabled(false);
-            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-        }
-        toolbar.setTitle(title);
+//        if (actionBar != null) {
+//            actionBar.setHomeButtonEnabled(false);
+//            actionBar.setDisplayHomeAsUpEnabled(false);
+//        }
+//        toolbar.setTitle(title);
         fileListFragment = null;
         return true;
     }

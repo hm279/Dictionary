@@ -3,10 +3,9 @@ package com.dict.hm.dictionary.async;
 import android.os.Handler;
 import android.os.Message;
 
-import com.dict.hm.dictionary.BaseManagerActivity;
-import com.dict.hm.dictionary.DictManagerActivity;
+import com.dict.hm.dictionary.ui.DictManagerActivity;
 import com.dict.hm.dictionary.dict.DictSQLiteHelper;
-import com.dict.hm.dictionary.parse.IdxParser;
+import com.dict.hm.dictionary.dict.parse.IdxParser;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,7 +54,7 @@ public class LoadDictionary extends Thread{
             message.arg1 = count;
             handler.sendMessage(message);
         }
-        Message message = handler.obtainMessage(BaseManagerActivity.OK);
+        Message message = handler.obtainMessage(DictManagerActivity.OK);
         message.obj = bookName;
         handler.sendMessage(message);
     }

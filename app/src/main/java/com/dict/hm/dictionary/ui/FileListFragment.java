@@ -1,4 +1,4 @@
-package com.dict.hm.dictionary;
+package com.dict.hm.dictionary.ui;
 
 import android.app.Activity;
 import android.app.Fragment;
@@ -13,6 +13,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import com.dict.hm.dictionary.R;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -78,7 +80,7 @@ public class FileListFragment extends Fragment {
             length = rootDir.getAbsolutePath().length();
             onDictionarySelected(rootDir);
         }
-        getActivity().setTitle("Select File");
+//        getActivity().setTitle("Select File");
     }
 
     int length;
