@@ -19,6 +19,7 @@
 Android 通过 Intent 提供接口，接收 text 数据，解析内容过滤出生词，也可以通过 Intent 向各词典应用申请单词解释。但这里面没统一格式，怎么实现？
 
 下面是我实现的部分 (Android 应用)
+[下载](app/app-release.apk)
 ![screenshot](screenshot/dict.png)
 
 ---------------
