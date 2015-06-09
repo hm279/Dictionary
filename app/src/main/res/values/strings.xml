@@ -42,9 +42,9 @@
     <string name="settings_auto_filter_hint">when add new paper, auto filter known words</string>
     <string name="settings_clear">Clear</string>
     <string name="settings_cancel">Cancel</string>
-    <string name="key_auto_filter">auto_filter</string>
+    <string name="key_auto_filter" translatable="false">auto_filter</string>
 
-    <string-array name="order">
+    <string-array name="order" translatable="false">
         <item>order by count</item>
         <item>order by time</item>
     </string-array>
