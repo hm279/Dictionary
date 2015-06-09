@@ -29,15 +29,18 @@ Android 通过 Intent 提供接口，接收 text 数据，解析内容过滤出�
 
 FTS 表提高搜索速度，会建立大量索引，空间使用量大增。不存放非搜索数据。
 全文搜索表(FTS)：
+
 | rowid      | word     |
 | :--------- | --------:|
 
 根据不同词典格式建立不同的索引表。
 单词索引表：
+
 | rowid     | offset   | size    |
 | :-------- | --------:|
 
 记录词典信息表： 
+
 | rowid | name  | type  | data  | active    | table_name  |
 | :---- | -----:|
 
@@ -48,10 +51,12 @@ active: 激活词典。
 table_name: 词典对应的表名，目前是 table_name = name
 
 通用个人词库表： 
+
 | rowid | word | count | time |
 | :---- | -----:|
 
 专业个人词库表： 
+
 | rowid | word | count | time | explain |
 | :---- | -----:|
 
