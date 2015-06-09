@@ -8,7 +8,6 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.dict.hm.dictionary.R;
-import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 
 import java.util.ArrayList;
 
@@ -18,40 +17,32 @@ import java.util.ArrayList;
 public class UserDictAdapter extends BaseAdapter {
     private LayoutInflater layoutInflater;
     private int count;
-    private UserAsyncWorkerHandler queryHandler;
     ArrayList<String> words;
     ArrayList<Long> counts;
     ArrayList<String> times;
-    long lastID;
 
-    private static final int size = 10;
-    boolean hasNext = true;
-    private int queryPosition = size;
-
-    public UserDictAdapter(Context context, UserAsyncWorkerHandler handler) {
-        count = 0;
+    public UserDictAdapter(Context context) {
         layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        queryHandler = handler;
         words = new ArrayList<>();
         counts = new ArrayList<>();
         times = new ArrayList<>();
-
-        queryHandler.startQuery(size, 0);
+        count = 0;
     }
 
     public void updateAdapterData(ArrayList<String> words, ArrayList<Long> counts,
-                                  ArrayList<String> times, long lastID) {
-        if (words.size() < size) {
-            hasNext = false;
-        }
-        if (lastID > -1) {
-            this.words.addAll(words);
-            this.counts.addAll(counts);
-            this.times.addAll(times);
-            this.lastID = lastID;
-            count = this.words.size();
-            notifyDataSetChanged();
-        }
+                                  ArrayList<String> times) {
+        this.words.addAll(words);
+        this.counts.addAll(counts);
+        this.times.addAll(times);
+        count = this.words.size();
+        notifyDataSetChanged();
+    }
+
+    public void clearAdapterData () {
+        words.clear();
+        counts.clear();
+        times.clear();
+        count = 0;
     }
 
     @Override
@@ -89,13 +80,7 @@ public class UserDictAdapter extends BaseAdapter {
         word.setText(words.get(position));
         count.setText(counts.get(position).toString());
         time.setText(times.get(position));
-        /**
-         * preload words, when to start nextQuery()?
-         */
-        if (hasNext && (queryPosition < position + size)) {
-            queryHandler.nextQuery(size, lastID);
-            queryPosition += size;
-        }
+
         return view;
     }
 

@@ -29,7 +29,7 @@ public class SwitchDictDialog extends DialogFragment {
             listener = (SwitchDictDialogListener) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement ConfirmDialogListener");
+                    + " must implement SwitchDictDialogListener");
         }
     }
 

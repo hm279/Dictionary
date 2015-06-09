@@ -44,4 +44,9 @@
     <string name="settings_cancel">Cancel</string>
     <string name="key_auto_filter">auto_filter</string>
 
+    <string-array name="order">
+        <item>order by count</item>
+        <item>order by time</item>
+    </string-array>
+
 </resources>

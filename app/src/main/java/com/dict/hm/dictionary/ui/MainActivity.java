@@ -39,7 +39,6 @@ import android.widget.Toast;
 
 import com.dict.hm.dictionary.BuildConfig;
 import com.dict.hm.dictionary.R;
-import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
 import com.dict.hm.dictionary.dict.DictContentProvider;
 import com.dict.hm.dictionary.dict.DictFormat;
 import com.dict.hm.dictionary.dict.DictManager;
@@ -49,7 +48,6 @@ import com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout;
 import com.dict.hm.dictionary.paper.PaperJsonReader;
 import com.dict.hm.dictionary.dict.parse.DictParser;
 import com.dict.hm.dictionary.ui.adapter.NavigationDrawerAdapter;
-import com.dict.hm.dictionary.ui.adapter.UserDictAdapter;
 import com.dict.hm.dictionary.ui.dialog.AboutDialog;
 import com.dict.hm.dictionary.ui.dialog.SwitchDictDialog;
 
@@ -61,8 +59,7 @@ import java.util.ArrayList;
 
 
 public class MainActivity extends AppCompatActivity
-        implements UserAsyncWorkerHandler.UserDictQueryListener,
-        SwitchDictDialog.SwitchDictDialogListener{
+        implements SwitchDictDialog.SwitchDictDialogListener{
 
     private String TAG = "MainActivity";
 
@@ -86,7 +83,6 @@ public class MainActivity extends AppCompatActivity
     private DictParser dictParser = null;
     private DictManager manager = null;
     private PaperJsonReader jsonReader = null;
-    private UserDictAdapter userDictAdapter = null;
 
     GestureDetectorCompat detector;
 
@@ -372,7 +368,7 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case NavigationDrawerAdapter.SETTINGS:
                         SettingsFragment fragment = new SettingsFragment();
-                        displayFragment(fragment);
+                        showFragment(fragment);
                         break;
                     case NavigationDrawerAdapter.ABOUT:
                         AboutDialog dialog = new AboutDialog();
@@ -424,6 +420,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onSwitchDictClick(int which) {
         switchActiveDict(which);
+        wordView.setText(manager.getDictFormat(which).getName());
+        resultListView.setAdapter(null);
     }
 
     /** ----------------------------Search and Query---------------------------------------------*/
@@ -549,7 +547,7 @@ public class MainActivity extends AppCompatActivity
             bundle.putString(DefinitionFragment.WORD, word);
             bundle.putString(DefinitionFragment.DEF, definition);
             definitionFragment.setArguments(bundle);
-            displayFragment(definitionFragment);
+            showFragment(definitionFragment);
         }
         searchItem.collapseActionView();
         Log.d("searchView", "clear focus");
@@ -582,7 +580,7 @@ public class MainActivity extends AppCompatActivity
         bundle.putString(PaperViewerFragment.PAPER_NAME, fileName);
         PaperViewerFragment fragment = new PaperViewerFragment();
         fragment.setArguments(bundle);
-        displayFragment(fragment);
+        showFragment(fragment);
     }
 
     /**
@@ -608,7 +606,7 @@ public class MainActivity extends AppCompatActivity
 
     /** ----------------------------Fragment manager---------------------------------------------*/
 
-    private void displayFragment(Fragment fragment) {
+    private void showFragment(Fragment fragment) {
         FragmentTransaction transaction= getFragmentManager().beginTransaction();
         if (canDismiss) {
             transaction.replace(R.id.main_content, fragment, TAG);
@@ -638,18 +636,13 @@ public class MainActivity extends AppCompatActivity
      */
     private void showUserDict() {
         if (canDismiss) {
-//            dismissDefinition(false);
             dismissFragment();
         }
-        UserAsyncWorkerHandler userHandler = UserAsyncWorkerHandler.getInstance(this, null);
-        userHandler.setUserDictQueryListener(this);
-        userDictAdapter = new UserDictAdapter(this, userHandler);
-        wordView.setText(R.string.action_user_dict);
-        resultListView.setAdapter(userDictAdapter);
-        listAction = -1;
+        UserDictFragment fragment = new UserDictFragment();
+        showFragment(fragment);
     }
 
-    /** -------------------define a callback for DictManager to update DrawerAdapter-------------*/
+    /** -------------------define a callback for DictManager to update Dict ---------------------*/
 
     interface QueryCompleteCallback {
         void onQueryComplete();
@@ -660,38 +653,6 @@ public class MainActivity extends AppCompatActivity
         public void onQueryComplete() {
             updateDictData();
             Log.d(TAG, "QueryCallback");
-        }
-    }
-
-    /** -----------------------------------------------------------------------------------------*/
-    //TODO: remove the lastID, sort the words by count or time. get all the words in one time.
-    //without sort this function won't help user to know their words better
-    @Override
-    public void onUserDictQueryComplete(Cursor cursor) {
-        ArrayList<String> words = new ArrayList<>();
-        ArrayList<Long> counts = new ArrayList<>();
-        ArrayList<String> times = new ArrayList<>();
-        long lastID = -1;
-
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                int idIndex = cursor.getColumnIndex("rowid");
-                int wordIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_WORD);
-                int countIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_COUNT);
-                int timeIndex = cursor.getColumnIndex(UserDictSQLiteHelper.COLUMN_TIME);
-                do {
-                    words.add(cursor.getString(wordIndex));
-                    counts.add(cursor.getLong(countIndex));
-                    times.add(cursor.getString(timeIndex));
-                } while (cursor.moveToNext());
-                cursor.moveToLast();
-                lastID = cursor.getLong(idIndex);
-                Log.d("lastID", "" + lastID);
-            }
-            cursor.close();
-        }
-        if (userDictAdapter != null) {
-            userDictAdapter.updateAdapterData(words, counts, times, lastID);
         }
     }
 

@@ -23,25 +23,23 @@ public class UserAsyncWorkerHandler extends Handler {
     private static final int EVENT_ARG_UPDATE = 3;
     private static final int EVENT_ARG_DELETE = 4;
     private static final int EVENT_USER_QUERY = 5;
-    private static final int EVENT_USER_LIST = 6;
+    private static final int EVENT_PAPER_LIST = 6;
 
     private static Looper sLooper = null;
     private Handler mWorkerThreadHandler;
 
     WeakReference<UserDictQueryListener> listenerWeakReference;
+    DictManagerCallback callback;
     UserDictSQLiteHelper helper;
 
-    DictManagerCallback callback;
     static UserAsyncWorkerHandler handler = null;
 
     protected static final class WorkerArgs {
-        long arg1;  //size
-        long arg2;  //offset
-        long rowid;
         Handler handler;
+        long rowid;
         Cursor result;
         DictFormat format;
-        // for list paper dir
+        //paper list
         File dir;
         ArrayList<String> files;
     }
@@ -61,21 +59,21 @@ public class UserAsyncWorkerHandler extends Handler {
             Message message = args.handler.obtainMessage(msg.what);
             switch (msg.what) {
                 case EVENT_ARG_QUERY:
-                    args.result = helper.getDictionaries();
+                    args.result = helper.queryDictionaries();
                     break;
                 case EVENT_ARG_INSERT:
                     args.rowid = helper.insertDictionary(args.format);
                     break;
                 case EVENT_ARG_UPDATE:
-                    args.rowid = helper.updateDictionary(args.rowid, args.arg1);
+                    args.rowid = helper.updateDictionary(args.rowid, msg.arg1);
                     break;
                 case EVENT_ARG_DELETE:
                     args.rowid = helper.deleteDictionary(args.rowid);
                     break;
                 case EVENT_USER_QUERY:
-                    args.result = helper.getWords(args.arg1, args.arg2);
+                    args.result = helper.getWordsOrderBy(msg.arg1);
                     break;
-                case EVENT_USER_LIST:
+                case EVENT_PAPER_LIST:
                     if (args.dir.isDirectory()) {
                         String[] names = args.dir.list();
                         ArrayList<String> list = new ArrayList<>(names.length);
@@ -147,7 +145,7 @@ public class UserAsyncWorkerHandler extends Handler {
                 }
                 listener.onUserDictQueryComplete(args.result);
                 break;
-            case EVENT_USER_LIST:
+            case EVENT_PAPER_LIST:
                 callback.onUserPaperListComplete(args.files);
                 break;
         }
@@ -160,7 +158,7 @@ public class UserAsyncWorkerHandler extends Handler {
         WorkerArgs args = new WorkerArgs();
         args.handler = this;
         args.dir = paperDir;
-        Message message = mWorkerThreadHandler.obtainMessage(EVENT_USER_LIST);
+        Message message = mWorkerThreadHandler.obtainMessage(EVENT_PAPER_LIST);
         message.obj = args;
         message.sendToTarget();
     }
@@ -187,9 +185,9 @@ public class UserAsyncWorkerHandler extends Handler {
         WorkerArgs args = new WorkerArgs();
         args.handler = this;
         args.rowid = rowid;
-        args.arg1 = on;
         Message message = mWorkerThreadHandler.obtainMessage(EVENT_ARG_UPDATE);
         message.obj = args;
+        message.arg1 = on;
         message.sendToTarget();
     }
 
@@ -202,19 +200,18 @@ public class UserAsyncWorkerHandler extends Handler {
         message.sendToTarget();
     }
 
-    public void startQuery(long size, long offset) {
+    /**
+     * get user dict's words
+     * @param which
+     */
+    public void startQuery(int which) {
         WorkerArgs args = new WorkerArgs();
-        args.arg1 = size;
-        args.arg2 = offset;
         args.handler = this;
 
         Message message = mWorkerThreadHandler.obtainMessage(EVENT_USER_QUERY);
         message .obj = args;
+        message.arg1 = which;
         message.sendToTarget();
-    }
-
-    public void nextQuery(long size, long lastID) {
-        startQuery(size, lastID);
     }
 
     public interface UserDictQueryListener {
@@ -228,6 +225,4 @@ public class UserAsyncWorkerHandler extends Handler {
         void onDeleteComplete(long id);
         void onUserPaperListComplete(ArrayList<String> list);
     }
-
-
 }

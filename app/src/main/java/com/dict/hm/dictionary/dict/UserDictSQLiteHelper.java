@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import com.dict.hm.dictionary.paper.JsonEntry;
+import com.dict.hm.dictionary.ui.UserDictFragment;
+import com.dict.hm.dictionary.ui.dialog.SelectDialog;
 
 import java.util.ArrayList;
 
@@ -57,7 +59,7 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
     /**
      * for 'select * from Table LIMIT 100 OFFSET 0'
      */
-    private static final String queryWordsSQL = "select rowid, * from " + USER_TABLE;// + " order by " + TIME;
+    private static final String queryWordsSQL = "select rowid, * from " + USER_TABLE;
     private static final String queryDictsSQL = "select rowid, * from " + DICT_TABLE;//+ " order by " + COLUMN_DICT_NAME;
 
     private SQLiteDatabase database = null;
@@ -92,6 +94,7 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
 //        onCreate(db);
         Log.d(USER_DB, "onUpgrade");
     }
+    /** ------------------------- about dictionary's information --------------------------------*/
 
     public long insertDictionary(DictFormat format) {
         ContentValues values = new ContentValues();
@@ -103,7 +106,7 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
         return database.insert(DICT_TABLE, null, values);
     }
 
-    public long updateDictionary(long rowid, long on) {
+    public long updateDictionary(long rowid, int on) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_DICT_ACTIVE, on);
         return database.update(DICT_TABLE, values, "rowid = ?", new String[]{Long.toString(rowid)});
@@ -113,17 +116,15 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
         return database.delete(DICT_TABLE, "rowid = ?", new String[]{Long.toString(rowid)});
     }
 
-    public Cursor getDictionaries() {
+    public Cursor queryDictionaries() {
         if (database == null) {
             database = getReadableDatabase();
         }
         return database.rawQuery(queryDictsSQL, null);
     }
 
-    public void clearUserWords() {
-        SQLiteDatabase database = getWritableDatabase();
-        database.delete(USER_TABLE, null, null);
-    }
+    /** ------------------------ about user dict's words ---------------------------------------
+        ------------------------ archive words to user dict ------------------------------------*/
 
     public void insertWords(ArrayList<JsonEntry> words) {
         insertWords(words, false);
@@ -168,15 +169,6 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
         return left;
     }
 
-    public Cursor getWords(long size, long offset) {
-        if (database == null) {
-            database = getReadableDatabase();
-        }
-        String sql = queryWordsSQL + " limit " + size + " offset " + offset;
-        return database.rawQuery(sql, null);
-//        return database.query(mTableName, null, querySelectionBetween,
-//                new String[]{Long.toString(size), Long.toString(offset)}, null, null, queryOrderBy);
-    }
 
     private long insertWord(String word, long count) {
         ContentValues values = new ContentValues();
@@ -217,6 +209,26 @@ public class UserDictSQLiteHelper extends SQLiteOpenHelper {
             this.id = id;
             this.count = count;
         }
+    }
+
+    public void clearUserWords() {
+        SQLiteDatabase database = getWritableDatabase();
+        database.delete(USER_TABLE, null, null);
+    }
+
+    public Cursor getWordsOrderBy(int which) {
+        if (database == null) {
+            database = getReadableDatabase();
+        }
+        String sql;
+        if (which == UserDictFragment.ORDER_COUNT) {
+            sql = queryWordsSQL + " order by " + COLUMN_COUNT + " DESC";
+        } else if (which == UserDictFragment.ORDER_TIME){
+            sql = queryWordsSQL + " order by " + COLUMN_TIME + " DESC";
+        } else {
+            sql = queryWordsSQL +  " order by rowid DESC" + " limit " + UserDictFragment.size;// + " offset " + offset;
+        }
+        return database.rawQuery(sql, null);
     }
 
 }
