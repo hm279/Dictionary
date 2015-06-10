@@ -23,7 +23,7 @@ public class PaperViewerFragment extends ListFragment{
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        dictParser = ((MainActivity)activity).getDictParser();
+        dictParser = DictManager.getInstance(activity).getDictParser();
     }
 
     @Override

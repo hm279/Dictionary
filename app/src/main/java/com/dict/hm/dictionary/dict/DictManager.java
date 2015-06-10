@@ -7,6 +7,7 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.dict.hm.dictionary.dict.parse.DictParser;
 import com.dict.hm.dictionary.ui.DictManagerActivity;
 import com.dict.hm.dictionary.ui.MainActivity;
 import com.dict.hm.dictionary.async.LoadDictionary;
@@ -25,7 +26,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     private ArrayList<Long> rowid;
     private ArrayList<DictFormat> dictFormats;
     private int active;
-    private boolean inited = false;
+//    private boolean inited = false;
     /**
      * DictManager also take control of papers
      * the papers' file's name.
@@ -36,7 +37,8 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
     Context context;
     UserDictSQLiteHelper helper;
     UserAsyncWorkerHandler queryHandler;
-    WeakReference<MainActivity.QueryCallback> reference = null;
+
+    DictParser dictParser = null;
 
     static DictManager manager;
 
@@ -170,7 +172,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         return active;
     }
 
-    public void setActiveDict(int active) {
+    private void setActiveDict(int active) {
         if (active == this.active || active < 0 || active >= dictFormats.size()) {
             return;
         }
@@ -198,9 +200,9 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         return papers;
     }
 
-    public boolean isInited() {
-        return inited;
-    }
+//    public boolean isInited() {
+//        return inited;
+//    }
 
     private void setRowid(ArrayList<Long> rowid) {
         this.rowid.addAll(rowid);
@@ -215,6 +217,8 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
             }
         }
     }
+
+    /** ------------------------------- Paper Manage --------------------------------------*/
 
     public void addPaper(File paper) {
         if (paper == null) {
@@ -258,6 +262,8 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         Toast.makeText(context, "Words Clear!", Toast.LENGTH_LONG).show();
     }
 
+    /** ------------------------------------------------------------------------------------*/
+
     public class DropTableThread extends Thread {
         String book;
         Handler handler;
@@ -276,22 +282,14 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         }
     }
 
-    public void setOnQueryCompleteCallback(MainActivity.QueryCallback callback) {
-        reference = new WeakReference<>(callback);
-    }
+    /** ------------------------------------------------------------------------------------*/
 
     @Override
     public void onUserPaperListComplete(ArrayList<String> list) {
         if (list != null) {
             papers.addAll(list);
         }
-        inited = true;
-        if (reference != null) {
-            MainActivity.QueryCallback callback = reference.get();
-            if (callback != null) {
-                callback.onQueryComplete();
-            }
-        }
+//        inited = true;
     }
 
     @Override
@@ -327,12 +325,7 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
          * onUserPaperListComplete() do;
          */
 //        inited = true;
-//        if (reference != null) {
-//            MainActivity.QueryCallback callback = reference.get();
-//            if (callback != null) {
-//                callback.onQueryComplete();
-//            }
-//        }
+        switchActiveDict(active);
     }
 
     @Override
@@ -350,4 +343,44 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
 
     }
 
+    /** ---------------------------- DictParser ---------------------------------------------*/
+
+    public DictParser getDictParser() {
+        return dictParser;
+    }
+
+    private void initDictParser(int type, String data) {
+        if (type == 0) {
+            /** type 0 means stardict format */
+            if (data == null) {
+                Log.d("error", "DictFormat's data field missing!");
+                return;
+            }
+            String dictPath = data.substring(0, data.lastIndexOf(".ifo")).concat(".dict");
+            File dict = new File(dictPath);
+            if (dict.isFile()) {
+                if (dictParser != null) {
+                    dictParser.closeFile();
+                }
+                dictParser = new DictParser(dict);
+            }
+        }
+    }
+
+    public void switchActiveDict(int active) {
+        DictFormat format = getDictFormat(active);
+        if (format != null) {
+            initDictParser(format.getType(), format.getData());
+            setActiveDict(active);
+        }
+    }
+
+    public void closeDictParser() {
+        if (dictParser != null) {
+            dictParser.closeFile();
+            dictParser = null;
+        }
+    }
+
+    //TODO: now can remove the papers from DictManager
 }

@@ -80,9 +80,7 @@ public class MainActivity extends AppCompatActivity
     private final int action_show_paper = 1;
     private int listAction;
 
-    private DictParser dictParser = null;
     private DictManager manager = null;
-    private PaperJsonReader jsonReader = null;
 
     GestureDetectorCompat detector;
 
@@ -110,12 +108,9 @@ public class MainActivity extends AppCompatActivity
 
         initNavigationDrawer();
         manager = DictManager.getInstance(this);
-        if (manager.isInited()) {
-            updateDictData();
-        } else {
-            QueryCallback callback = new QueryCallback();
-            manager.setOnQueryCompleteCallback(callback);
-        }
+//        if (manager.isInited()) {
+//            manager.switchActiveDict(manager.getActiveDict());
+//        }
 
         detector = new GestureDetectorCompat(this, new MyGestureListener());
 
@@ -150,15 +145,11 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onDestroy() {
-        if (dictParser != null) {
-            dictParser.closeFile();
-            dictParser = null;
-        }
-        if (jsonReader != null) {
-            jsonReader.closeJson();
-            jsonReader = null;
-        }
         Log.d(TAG, "onDestroy");
+        //activity destroy,but process is still exist.
+//        if (manager != null) {
+//            manager.closeDictParser();
+//        }
         super.onDestroy();
     }
 
@@ -379,23 +370,6 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private void updateDictData() {
-        switchActiveDict(manager.getActiveDict());
-    }
-
-    private void switchActiveDict(int active) {
-        Log.d(TAG, "active:" + active);
-        DictFormat format = manager.getDictFormat(active);
-        if (format != null) {
-            setDictFile(format.getType(), format.getData());
-            manager.setActiveDict(active);
-//            wordView.setText(format.getName());
-//        } else {
-//            wordView.setText("");
-        }
-//        resultListView.setAdapter(null);
-    }
-
     /** ----------------------------Switch dictionary--------------------------------------------*/
 
     private void showSwitchDictDialog() {
@@ -419,7 +393,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSwitchDictClick(int which) {
-        switchActiveDict(which);
+        manager.switchActiveDict(which);
         wordView.setText(manager.getDictFormat(which).getName());
         resultListView.setAdapter(null);
     }
@@ -524,6 +498,7 @@ public class MainActivity extends AppCompatActivity
             int offset = cursor.getInt(offsetIndex);
             int size = cursor.getInt(sizeIndex);
             String definition = null;
+            DictParser dictParser = manager.getDictParser();
             if (dictParser != null) {
                 definition = dictParser.getWordDefinition(offset, size);
             }
@@ -583,27 +558,6 @@ public class MainActivity extends AppCompatActivity
         showFragment(fragment);
     }
 
-    /**
-    private void showPaper(String fileName) {
-        File paperFile = new File(manager.getPaperDir(), fileName);
-        if (jsonReader != null) {
-            jsonReader.closeJson();
-        }
-        jsonReader = new PaperJsonReader(paperFile);
-        jsonReader.openJson();
-        //TODO:quit the word query thread
-        PaperViewerAdapter paperViewerAdapter = new PaperViewerAdapter(this, jsonReader, dictParser);
-        wordView.setText(fileName);
-        resultListView.setAdapter(paperViewerAdapter);
-        listAction = -1;
-        Log.d(TAG, "Paper switch");
-    }
-     */
-
-    public DictParser getDictParser() {
-        return dictParser;
-    }
-
     /** ----------------------------Fragment manager---------------------------------------------*/
 
     private void showFragment(Fragment fragment) {
@@ -642,39 +596,7 @@ public class MainActivity extends AppCompatActivity
         showFragment(fragment);
     }
 
-    /** -------------------define a callback for DictManager to update Dict ---------------------*/
-
-    interface QueryCompleteCallback {
-        void onQueryComplete();
-    }
-
-    public class QueryCallback implements QueryCompleteCallback {
-        @Override
-        public void onQueryComplete() {
-            updateDictData();
-            Log.d(TAG, "QueryCallback");
-        }
-    }
-
     /** -----------------------------------------------------------------------------------------*/
-
-    public void setDictFile(int type, String data) {
-        if (type == 0) {
-            /** type 0 means star dict format */
-            if (data == null) {
-                Log.d("error", "DictFormat's data field missing!");
-                return;
-            }
-            String dictPath = data.substring(0, data.lastIndexOf(".ifo")).concat(".dict");
-            File dict = new File(dictPath);
-            if (dict.isFile()) {
-                if (dictParser != null) {
-                    dictParser.closeFile();
-                }
-                dictParser = new DictParser(dict);
-            }
-        }
-    }
 
     private class Item {
         Long id;
@@ -691,7 +613,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /** ------------------------------------------------------------------------------------------
+    /* ------------------------------------------------------------------------------------------
 
     private void setNotification(int id, String msg) {
         Notification.Builder builder = new Notification.Builder(this)
