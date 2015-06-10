@@ -1,16 +1,25 @@
 package com.dict.hm.dictionary.ui;
 
 import android.app.ListFragment;
+import android.content.ContentResolver;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ListView;
 
 import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.async.UserAsyncWorkerHandler;
+import com.dict.hm.dictionary.dict.DictContentProvider;
+import com.dict.hm.dictionary.dict.DictManager;
+import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
+import com.dict.hm.dictionary.dict.parse.DictParser;
 import com.dict.hm.dictionary.ui.adapter.UserDictAdapter;
+import com.dict.hm.dictionary.ui.dialog.DefinitionDialog;
 import com.dict.hm.dictionary.ui.dialog.SelectDialog;
 
 import java.util.ArrayList;
@@ -27,6 +36,8 @@ public class UserDictFragment extends ListFragment
     public static final int size = 100;
     private UserDictAdapter userDictAdapter = null;
     private UserAsyncWorkerHandler userHandler;
+    private Uri uri;
+    private DictManager manager;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,6 +57,9 @@ public class UserDictFragment extends ListFragment
         setEmptyText(getResources().getString(R.string.action_user_dict));
         setListAdapter(userDictAdapter);
         setListShown(true);
+
+        manager = DictManager.getInstance(getActivity());
+        uri = Uri.withAppendedPath(DictContentProvider.CONTENT_URI, "word");
     }
 
     @Override
@@ -61,6 +75,26 @@ public class UserDictFragment extends ListFragment
             dialog.show(getFragmentManager(), null);
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        DictParser dictParser = manager.getDictParser();
+        if (dictParser == null) {
+            return;
+        }
+        String word = (String) l.getItemAtPosition(position);
+        ContentResolver contentResolver = getActivity().getContentResolver();
+        Cursor cursor = contentResolver.query(uri, null, null, new String[]{word}, null);
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                int offset = cursor.getInt(cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET));
+                int size = cursor.getInt(cursor.getColumnIndex(DictSQLiteDefine.COLUMN_SIZE));
+                String definition = dictParser.getWordDefinition(offset, size);
+                DefinitionDialog.getDefinitionDialog(word, definition).show(getFragmentManager(), null);
+            }
+            cursor.close();
+        }
     }
 
     /** -----------------------------------------------------------------------------------------*/
