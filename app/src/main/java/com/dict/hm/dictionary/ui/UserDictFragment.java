@@ -73,8 +73,10 @@ public class UserDictFragment extends ListFragment
             SelectDialog dialog = new SelectDialog();
             dialog.setTargetFragment(this, 0);
             dialog.show(getFragmentManager(), null);
+            return true;
+        } else {
+            return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
 
     @Override

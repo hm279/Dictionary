@@ -41,14 +41,15 @@ import com.dict.hm.dictionary.BuildConfig;
 import com.dict.hm.dictionary.R;
 import com.dict.hm.dictionary.dict.DictContentProvider;
 import com.dict.hm.dictionary.dict.DictFormat;
+import com.dict.hm.dictionary.dict.DictItem;
 import com.dict.hm.dictionary.dict.DictManager;
 import com.dict.hm.dictionary.dict.DictSQLiteDefine;
 import com.dict.hm.dictionary.dict.UserDictSQLiteHelper;
 import com.dict.hm.dictionary.lib.ScrimInsetsFrameLayout;
-import com.dict.hm.dictionary.paper.PaperJsonReader;
 import com.dict.hm.dictionary.dict.parse.DictParser;
 import com.dict.hm.dictionary.ui.adapter.NavigationDrawerAdapter;
 import com.dict.hm.dictionary.ui.dialog.AboutDialog;
+import com.dict.hm.dictionary.ui.dialog.DefinitionDialog;
 import com.dict.hm.dictionary.ui.dialog.SwitchDictDialog;
 
 import java.io.File;
@@ -70,7 +71,6 @@ public class MainActivity extends AppCompatActivity
     private NavigationDrawerAdapter adapter;
 
     private SearchView searchView;
-    private DefinitionFragment definitionFragment = null;
     private TextView wordView;
     private ListView resultListView;
     private MenuItem searchItem;
@@ -160,7 +160,6 @@ public class MainActivity extends AppCompatActivity
             return;
         }
         if (canDismiss) {
-//            dismissDefinition(true);
             dismissFragment();
             return;
         }
@@ -293,8 +292,7 @@ public class MainActivity extends AppCompatActivity
              */
             Uri uri = intent.getData();
             String word = intent.getStringExtra(SearchManager.EXTRA_DATA_KEY);
-            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-            parseDefinition(word, cursor);
+            parseDefinition(word, uri);
         } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String query = intent.getStringExtra(SearchManager.QUERY);
             getQueryResults(query);
@@ -338,7 +336,6 @@ public class MainActivity extends AppCompatActivity
                 drawerLayout.closeDrawer(leftDrawerLayout);
                 ((ListView) parent).setItemChecked(position, true);
                 if (canDismiss) {
-//                    dismissDefinition(false);
                     dismissFragment();
                 }
                 switch (adapter.getItemViewType(position)) {
@@ -398,26 +395,22 @@ public class MainActivity extends AppCompatActivity
         resultListView.setAdapter(null);
     }
 
-    /** ----------------------------Search and Query---------------------------------------------*/
-    /**
-     * TODO: should use WordAsyncQueryHandler to query words?
-     */
+    /** -----------------------------------------------------------------------------------------*/
 
     AdapterView.OnItemClickListener resultListViewListener = new AdapterView.OnItemClickListener(){
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             //position 0 is the headView.
+            //the two method is right, will get the right item.
+//            Object object = parent.getAdapter().getItem(position);
+            Object object = parent.getItemAtPosition(position);
             if (listAction == action_query_word) {
-                //the two method is right, will get the right item.
-//                Object object = parent.getAdapter().getItem(position);
-                Object object = parent.getItemAtPosition(position);
-                if (object instanceof Item) {
-                    Item item = (Item) object;
-                    Cursor cursor = getWordIndex(item.id);
-                    parseDefinition(item.text, cursor);
+                if (object instanceof DictItem) {
+                    DictItem item = (DictItem) object;
+                    Uri uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + item.getId());
+                    parseDefinition(item.toString(), uri);
                 }
             } else if (listAction == action_show_paper){
-                Object object = parent.getItemAtPosition(position);
                 if (object instanceof String) {
                     showPaper((String) object);
                 }
@@ -425,13 +418,18 @@ public class MainActivity extends AppCompatActivity
         }
     };
 
+    /** ----------------------------Search and Query---------------------------------------------*/
+    /**
+     * TODO: should use WordAsyncQueryHandler to query words?
+     */
+
     /**
      * have query action
      */
     public void getQueryResults(String word) {
         String countString;
         boolean noWordEqual = true;
-        ArrayAdapter<Item> words = null;
+        ArrayAdapter<DictItem> words = null;
         ContentResolver contentResolver = getContentResolver();
         final Cursor cursor = contentResolver.query(DictContentProvider.CONTENT_URI, null, null,
                 new String[]{word}, null);
@@ -443,7 +441,7 @@ public class MainActivity extends AppCompatActivity
                     count, new Object[] {count, word});
 
             words = new ArrayAdapter<>(this, R.layout.textview_item);
-            ArrayList<Item> list = new ArrayList<>();
+            ArrayList<DictItem> list = new ArrayList<>();
             int idIndex = cursor.getColumnIndex(BaseColumns._ID);
             int wordIndex = cursor.getColumnIndexOrThrow(DictSQLiteDefine.COLUMN_KEY_WORD);
             cursor.moveToFirst();
@@ -452,12 +450,13 @@ public class MainActivity extends AppCompatActivity
             do {
                 String text = cursor.getString(wordIndex);
                 lowerCase = text.toLowerCase();
-                Item item = new Item(cursor.getLong(idIndex), text);
+                DictItem item = new DictItem(cursor.getLong(idIndex), text);
                 if (lowerCase.startsWith(word)) {
                     words.add(item);
                     if (noWordEqual && lowerCase.equals(word)) {
                         //parse and show definition
-                        parseDefinition(text, getWordIndex(item.id));
+                        Uri uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + item.getId());
+                        parseDefinition(text, uri);
                         noWordEqual = false;
                     }
                 } else {
@@ -468,8 +467,8 @@ public class MainActivity extends AppCompatActivity
             cursor.close();
         }
         //no word to show, dismiss definition
-        if (canDismiss && noWordEqual) {
-            dismissDefinition(true);
+        if (canDismiss) {
+            dismissFragment();
         }
         wordView.setText(countString);
         resultListView.setAdapter(words);
@@ -477,20 +476,15 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * have query action
-     */
-    private Cursor getWordIndex(long rowId) {
-        Uri uri = Uri.parse(DictContentProvider.CONTENT_URI + "/" + rowId);
-        return getContentResolver().query(uri, null, null, null, null);
-    }
-
-    /**
      *
-     * @param cursor contains the definition of a word.
-     *               will create a Dialog fragment to show word definition.
+     * @param word word to query.
+     * @param uri the uri to get word's index information.
+     *
+     * will create a Dialog fragment to show word definition.
      * TODO: different dict format should have different parseDefinition() function;
      */
-    private void parseDefinition(String word, Cursor cursor) {
+    private void parseDefinition(String word, Uri uri) {
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
         if (cursor != null) {
             cursor.moveToFirst();
             int offsetIndex = cursor.getColumnIndex(DictSQLiteDefine.COLUMN_OFFSET);
@@ -506,38 +500,17 @@ public class MainActivity extends AppCompatActivity
                 //TODO: define the string in strings.xml
                 definition = "occur error while reading text from .dict file";
             }
-            showDefinition(word, definition);
+            DefinitionDialog dialog = DefinitionDialog.getDefinitionDialog(word, definition);
+            dialog.show(getFragmentManager(), null);
             cursor.close();
         }
     }
 
-    private void showDefinition(String word, String definition) {
-        if (canDismiss && definitionFragment != null) {
-            definitionFragment.updateViewData(word, definition);
-        } else {
-            if (definitionFragment == null) {
-                definitionFragment = new DefinitionFragment();
-            }
-            Bundle bundle = new Bundle();
-            bundle.putString(DefinitionFragment.WORD, word);
-            bundle.putString(DefinitionFragment.DEF, definition);
-            definitionFragment.setArguments(bundle);
-            showFragment(definitionFragment);
-        }
-        searchItem.collapseActionView();
-        Log.d("searchView", "clear focus");
-    }
-
-    private void dismissDefinition(boolean focus) {
-        dismissFragment();
-        definitionFragment = null;
-        if (focus) {
-//            searchView.requestFocus();
-//            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-//            imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
-            searchItem.expandActionView();
-            searchView.clearFocus();
-        }
+    private void expandSearchView() {
+        searchItem.expandActionView();
+        searchView.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        imm.toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
     }
 
     /** ----------------------------Paper viewer-------------------------------------------------*/
@@ -583,37 +556,16 @@ public class MainActivity extends AppCompatActivity
         resultListView.setVisibility(View.VISIBLE);
     }
 
-
     /** -----------------------------------------------------------------------------------------*/
     /**
      * TODO: show my dictionary order by time will need to load the whole dictionary
      */
     private void showUserDict() {
-        if (canDismiss) {
-            dismissFragment();
-        }
         UserDictFragment fragment = new UserDictFragment();
         showFragment(fragment);
     }
 
-    /** -----------------------------------------------------------------------------------------*/
-
-    private class Item {
-        Long id;
-        String text;
-
-        private Item(Long id, String text) {
-            this.id = id;
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
-    }
-
-    /* ------------------------------------------------------------------------------------------
+    /** ------------------------------------------------------------------------------------------
 
     private void setNotification(int id, String msg) {
         Notification.Builder builder = new Notification.Builder(this)
