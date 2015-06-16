@@ -146,7 +146,8 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         dictFormats.add(format);
         rowid.add(id);
         if (active == -1) {
-            setActiveDict(0);
+//            setActiveDict(0);
+            switchActiveDict(0);
         }
     }
 
@@ -160,7 +161,8 @@ public class DictManager implements UserAsyncWorkerHandler.DictManagerCallback{
         if (active == position) {
             active = -1;
             if (dictFormats.size() > 0) {
-                setActiveDict(0);
+//                setActiveDict(0);
+                switchActiveDict(0);
             }
         }
     }
